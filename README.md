@@ -67,8 +67,6 @@ event_all_day_is_blocking = true
 expiration = 720 # in hours (720 hours = 30 days)
 ```
 
-You can use free ical calendars to block during public holidays, e.g. <https://www.officeholidays.com/>
-
 2. Add the taskwarrior config
 
 ```
