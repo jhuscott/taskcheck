@@ -1,7 +1,14 @@
 
-_A non-AI automatic scheduler for taskwarrior (i.e. alternative to skedpal/timehero/flowsavvy/reclaim/trevor/motion)_
+> _A non-AI automatic scheduler for taskwarrior (i.e. alternative to skedpal/timehero/flowsavvy/reclaim/trevor/motion)_
 
 This is a taskwarrior extension checks if tasks can be completed on time, considering estimated time and working hours.
+
+## Features
+
+- [x] Use arbitrarily complex time maps
+- [x] Use ical to block time from scheduling (e.g. for meetings, vacations, etc.)
+- [ ] Implement scheduling algorithm for parallely working on multiple tasks
+- [ ] Use Google/Microsoft/Apple API to access calendars
 
 ## Install
 
@@ -40,17 +47,16 @@ tuesday = [[9, 12.30], [14, 17]]
 wednesday = [[9, 12.30], [14, 17]]
 thursday = [[9, 12.30], [14, 17]]
 friday = [[9, 12.30], [14, 17]]
-saturday = []
-sunday = []
 
 [time_maps.weekend]
 saturday = [[9, 12.30], ]
 sunday = [[9, 12.30], ]
 
 [scheduler]
-days_ahead = 1000
+days_ahead = 1000 # how far go with the schedule (lower values make the computation faster)
 
 [calendars]
+# ical calendars can be used to block your time and make the scheduling more precise
 [calendars.1]
 url = "https://your/url/to/calendar.ics"
 expiration = 0.08 # in hours (0.08 hours =~ 5 minutes)
