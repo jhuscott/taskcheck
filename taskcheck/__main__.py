@@ -280,7 +280,12 @@ def check_tasks_sequentially(tasks, config):
                     break
 
 
-# Load data and check tasks
-config = load_config()
-tasks = get_tasks()
-check_tasks_sequentially(tasks, config)
+def main():
+    # Load data and check tasks
+    config = load_config()
+    tasks = get_tasks()
+    check_tasks_sequentially(tasks, config)
+
+
+if __name__ == "__main__":
+    main()
