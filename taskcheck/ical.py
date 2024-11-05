@@ -83,6 +83,6 @@ def parse_ical_events(ical_text, days_ahead, all_day):
 
 
 def ical_to_dict(url, days_ahead=7, all_day=False, expiration=0.25, verbose=False):
-    ical_text = fetch_ical_data(url, expiration * 60, verbose)
+    ical_text = fetch_ical_data(url, expiration * 3600, verbose)
     events = parse_ical_events(ical_text, days_ahead, all_day)
     return events
