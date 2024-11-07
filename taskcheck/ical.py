@@ -73,11 +73,9 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                     until = until[0].date()
                     if until < today:
                         continue
-                if recurrence_rule.get("COUNT") is None:
-                    recurrence_rule["UNTIL"] = end_date
                 rrule = rrulestr(
                     str(recurrence_rule.to_ical(), "utf-8"),
-                    dtstart=today,
+                    dtstart=event_start,
                 )
                 occurrences.rrule(rrule)  # type: ignore
             else:
@@ -95,6 +93,8 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                             "end": end.isoformat(),
                         }
                     )
+                elif end.date() > end_date:
+                    break
 
     events.sort(key=lambda x: x["start"])
     return events
