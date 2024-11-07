@@ -19,12 +19,13 @@ def fetch_ical_data(url):
     return response.text
 
 
-def parse_ical_events(ical_text, days_ahead, all_day, tz_name=None):
+def parse_ical_events(ical_text, days_ahead, all_day, tz_name=None, verbose=False):
     cal = Calendar.from_ical(ical_text)
     today = datetime.now().date()
     end_date = today + timedelta(days=days_ahead)
 
     events = []
+    exceptions = set()
 
     for component in cal.walk():
         if component.name == "VEVENT":
@@ -51,8 +52,10 @@ def parse_ical_events(ical_text, days_ahead, all_day, tz_name=None):
                     )
                     event_end = event_start + timedelta(days=1) - timedelta(seconds=1)
             if recurrence_id:
-                # TODO: reccurrence exceptions
-                continue  # Ignore recurrence exceptions here for simplicity
+                if end_date >= recurrence_id.dt.date() >= today:
+                    # this was an occurrence of a recurring event
+                    # but has been moved, let's record the exception that must be removed
+                    exceptions.add(recurrence_id.dt.isoformat())
 
             occurrences = rruleset()
             if recurrence_rule:
@@ -68,6 +71,17 @@ def parse_ical_events(ical_text, days_ahead, all_day, tz_name=None):
                     dtstart=event_start,
                 )
                 occurrences.rrule(rrule)  # type: ignore
+                # exceptions to recurring events
+                excdates = component.get("exdate")
+                if excdates is not None:
+                    if isinstance(excdates, list):
+                        # concatenate all the .dts into one list
+                        excdates = [e for exdate in excdates for e in exdate.dts]
+                    else:
+                        excdates = excdates.dts
+                    for excdate in excdates:
+                        if end_date >= excdate.dt.date() >= today:
+                            exceptions.add(excdate.dt.isoformat())
             else:
                 # if event is not recurring, add it as a single event
                 if event_start.date() >= today and event_end.date() <= end_date:
@@ -88,6 +102,12 @@ def parse_ical_events(ical_text, days_ahead, all_day, tz_name=None):
                 elif end.date() > end_date:
                     break
 
+    with_exc_len = len(events)
+    events = [event for event in events if event["start"] not in exceptions]
+    if verbose:
+        print(
+            f"Removed {with_exc_len - len(events)} events that are exceptions to recurring events"
+        )
     events.sort(key=lambda x: x["start"])
     return events
 
@@ -120,7 +140,9 @@ def ical_to_dict(
     if verbose:
         print("Time taken to fetch ical data: ", time.time() - ttt)
     ttt = time.time()
-    events = parse_ical_events(ical_text, days_ahead, all_day, tz_name=tz_name)
+    events = parse_ical_events(
+        ical_text, days_ahead, all_day, tz_name=tz_name, verbose=verbose
+    )
     if verbose:
         print("Time taken to parse ical data: ", time.time() - ttt)
 
