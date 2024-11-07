@@ -95,7 +95,7 @@ urgency.inherit=1 # use dependencies to automatically prioritize tasks
 urgency.blocking.coefficient=2
 
 # give urgeny values to the estimated time
-# this is ln(estimation)
+# this is log(estimation) + 1, with base so that 36 hours has ~12 urgency
 urgency.uda.estimated.PT1H.coefficient = 1
 urgency.uda.estimated.PT2H.coefficient = 2.32
 urgency.uda.estimated.PT3H.coefficient = 3.67
