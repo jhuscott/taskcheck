@@ -54,7 +54,7 @@ def _hours_to_decimal(hour):
 
 def _hours_to_time(hour):
     hours = int(hour)
-    minutes = int((hour - hours) * 60)
+    minutes = int((hour - hours) * 100)
     return datetime.strptime(f"{hours}:{minutes}", "%H:%M").time()
 
 
@@ -94,6 +94,10 @@ def get_available_hours(time_map, date, calendars):
                     blocked_hours += _time_to_hours(
                         min(schedule_end, event_end)
                     ) - _time_to_hours(max(schedule_start, event_start))
+        if args.verbose and blocked_hours > 0:
+            print(
+                f"Blocked hours on {date} between {schedule_start} and {schedule_end}: {blocked_hours}"
+            )
     available_hours -= blocked_hours
     return available_hours
 
