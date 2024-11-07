@@ -77,6 +77,12 @@ def get_available_hours(time_map, date, calendars):
         schedule_end = _hours_to_time(schedule_end)
         for calendar in calendars:
             for event in calendar:
+                # we use str to make object serializable as jsons
+                if isinstance(event["start"], str):
+                    event["start"] = datetime.fromisoformat(event["start"])
+                if isinstance(event["end"], str):
+                    event["end"] = datetime.fromisoformat(event["end"])
+
                 if event["start"].date() > date:
                     break
                 elif event["end"].date() < date:

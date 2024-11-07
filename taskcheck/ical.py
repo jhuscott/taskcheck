@@ -1,12 +1,18 @@
+import hashlib
+import json
 from icalendar import Calendar
 from datetime import datetime, timedelta
 from dateutil.rrule import rruleset, rrulestr
 from requests_cache import CachedSession
+from pathlib import Path
+import appdirs
 
 import time
 
+CACHE = Path(appdirs.user_cache_dir("taskcheck"))
 
-def fetch_ical_data(url, expiration, verbose):
+
+def fetch_ical_data(url, expiration):
     session = CachedSession(
         "taskcheck",
         use_cache_dir=True,  # Save files in the default user cache dir
@@ -18,10 +24,7 @@ def fetch_ical_data(url, expiration, verbose):
         allowable_methods=["GET", "POST"],  # Cache whatever HTTP methods you want
         stale_if_error=True,  # In case of request errors, use stale cache data if possible
     )
-    ttt = time.time()
     response = session.get(url)
-    if verbose:
-        print("Time taken to fetch ical data: ", time.time() - ttt)
     response.raise_for_status()
     return response.text
 
@@ -62,8 +65,18 @@ def parse_ical_events(ical_text, days_ahead, all_day):
 
             event_dates = rruleset()
             if recurrence_rule:
+                # avoid handling rules that are already ended
+                # and don't create events beyond end_date
+                until = recurrence_rule.get("UNTIL")
+                if until is not None:
+                    until = until[0].date()
+                    if until < today:
+                        continue
+                    elif until > end_date:
+                        recurrence_rule["UNTIL"] = end_date
                 rrule = rrulestr(
-                    str(recurrence_rule.to_ical(), "utf-8"), dtstart=event_start
+                    str(recurrence_rule.to_ical(), "utf-8"),
+                    dtstart=event_start,
                 )
                 event_dates.rrule(rrule)  # type: ignore
             else:
@@ -74,15 +87,46 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                     events.append(
                         {
                             "summary": component.get("summary"),
-                            "start": event_date,
-                            "end": event_end,
+                            "start": event_date.isoformat(),
+                            "end": event_end.isoformat(),
                         }
                     )
 
     return events
 
 
+def get_cache_filename(url):
+    hash_object = hashlib.sha256(url.encode())
+    return CACHE / f"{hash_object.hexdigest()}.json"
+
+
 def ical_to_dict(url, days_ahead=7, all_day=False, expiration=0.25, verbose=False):
-    ical_text = fetch_ical_data(url, expiration * 3600, verbose)
+    CACHE.mkdir(exist_ok=True, parents=True)
+    cache_file = CACHE / get_cache_filename(url)
+    current_time = time.time()
+
+    # Check if cache file exists and is not expired
+    if cache_file.exists():
+        cache_mtime = cache_file.stat().st_mtime
+        if current_time - cache_mtime < expiration * 3600:
+            with open(cache_file, "r") as f:
+                events = json.load(f)
+            if verbose:
+                print("Loaded events from cache")
+            return events
+
+    # Fetch and parse iCal data
+    ttt = time.time()
+    ical_text = fetch_ical_data(url, expiration * 3600)
+    if verbose:
+        print("Time taken to fetch ical data: ", time.time() - ttt)
+    ttt = time.time()
     events = parse_ical_events(ical_text, days_ahead, all_day)
+    if verbose:
+        print("Time taken to parse ical data: ", time.time() - ttt)
+
+    # Save events to cache
+    with open(cache_file, "w") as f:
+        json.dump(events, f)
+
     return events
