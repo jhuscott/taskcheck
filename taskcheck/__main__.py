@@ -58,7 +58,7 @@ def _hours_to_time(hour):
     return datetime.strptime(f"{hours}:{minutes}", "%H:%M").time()
 
 
-def _time_to_hours(time):
+def _time_to_decimal(time):
     return time.hour + time.minute / 60
 
 
@@ -75,6 +75,7 @@ def get_available_hours(time_map, date, calendars):
         # so let's convert them to datetime.time objects
         schedule_start = _hours_to_time(schedule_start)
         schedule_end = _hours_to_time(schedule_end)
+        schedule_blocked_hours = 0
         for calendar in calendars:
             for event in calendar:
                 # we use str to make object serializable as jsons
@@ -91,13 +92,14 @@ def get_available_hours(time_map, date, calendars):
                 event_start = event["start"].time()
                 event_end = event["end"].time()
                 if event_start < schedule_end and event_end > schedule_start:
-                    blocked_hours += _time_to_hours(
+                    schedule_blocked_hours += _time_to_decimal(
                         min(schedule_end, event_end)
-                    ) - _time_to_hours(max(schedule_start, event_start))
-        if args.verbose and blocked_hours > 0:
+                    ) - _time_to_decimal(max(schedule_start, event_start))
+        if args.verbose and schedule_blocked_hours > 0:
             print(
-                f"Blocked hours on {date} between {schedule_start} and {schedule_end}: {blocked_hours}"
+                f"Blocked hours on {date} between {schedule_start} and {schedule_end}: {schedule_blocked_hours}"
             )
+        blocked_hours += schedule_blocked_hours
     available_hours -= blocked_hours
     return available_hours
 
