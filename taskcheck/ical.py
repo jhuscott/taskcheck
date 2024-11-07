@@ -3,33 +3,23 @@ import json
 from icalendar import Calendar
 from datetime import datetime, timedelta
 from dateutil.rrule import rruleset, rrulestr
-from requests_cache import CachedSession
+import requests
 from pathlib import Path
 import appdirs
+import zoneinfo
 
 import time
 
 CACHE = Path(appdirs.user_cache_dir("taskcheck"))
 
 
-def fetch_ical_data(url, expiration):
-    session = CachedSession(
-        "taskcheck",
-        use_cache_dir=True,  # Save files in the default user cache dir
-        cache_control=True,  # Use Cache-Control response headers for expiration, if available
-        urls_expire_after={url: expiration},  # Set expiration time
-        allowable_codes=[
-            200,
-        ],
-        allowable_methods=["GET", "POST"],  # Cache whatever HTTP methods you want
-        stale_if_error=True,  # In case of request errors, use stale cache data if possible
-    )
-    response = session.get(url)
+def fetch_ical_data(url):
+    response = requests.get(url)
     response.raise_for_status()
     return response.text
 
 
-def parse_ical_events(ical_text, days_ahead, all_day):
+def parse_ical_events(ical_text, days_ahead, all_day, tz_name=None):
     cal = Calendar.from_ical(ical_text)
     today = datetime.now().date()
     end_date = today + timedelta(days=days_ahead)
@@ -84,6 +74,8 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                     occurrences.rdate(event_start)
 
             for occurrence in occurrences:
+                if tz_name is not None:
+                    occurrence = occurrence.astimezone(zoneinfo.ZoneInfo(tz_name))
                 end = occurrence + (event_end - event_start)
                 if occurrence.date() >= today and end.date() <= end_date:
                     events.append(
@@ -105,7 +97,9 @@ def get_cache_filename(url):
     return CACHE / f"{hash_object.hexdigest()}.json"
 
 
-def ical_to_dict(url, days_ahead=7, all_day=False, expiration=0.25, verbose=False):
+def ical_to_dict(
+    url, days_ahead=7, all_day=False, expiration=0.25, verbose=False, tz_name=None
+):
     CACHE.mkdir(exist_ok=True, parents=True)
     cache_file = CACHE / get_cache_filename(url)
     current_time = time.time()
@@ -122,11 +116,11 @@ def ical_to_dict(url, days_ahead=7, all_day=False, expiration=0.25, verbose=Fals
 
     # Fetch and parse iCal data
     ttt = time.time()
-    ical_text = fetch_ical_data(url, expiration * 3600)
+    ical_text = fetch_ical_data(url)
     if verbose:
         print("Time taken to fetch ical data: ", time.time() - ttt)
     ttt = time.time()
-    events = parse_ical_events(ical_text, days_ahead, all_day)
+    events = parse_ical_events(ical_text, days_ahead, all_day, tz_name=tz_name)
     if verbose:
         print("Time taken to parse ical data: ", time.time() - ttt)
 
