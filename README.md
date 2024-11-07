@@ -61,6 +61,7 @@ days_ahead = 1000 # how far go with the schedule (lower values make the computat
 [calendars.1]
 url = "https://your/url/to/calendar.ics"
 expiration = 0.08 # in hours (0.08 hours =~ 5 minutes)
+timezone = "Europe/Rome" # if set, force timezone for this calendar; timezone values are TZ identifiers (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
 
 [calendars.holidays]
 url = "https://www.officeholidays.com/ics-clean/italy/milan"
@@ -81,16 +82,21 @@ uda.completion_date.type = date
 uda.completion_date.label = Expected Completion Date
 
 # Adjust urgency for taskcheck
-urgency.uda.estimated.coefficient = 1.0   # Increase urgency for tasks with longer estimated durations
-urgency.waiting.coefficient = 0.0 # you will use `wait:` to avoid scheduling tasks too much sooner
+# you will use `wait:` to avoid scheduling tasks too much sooner
+urgency.waiting.coefficient = 0.0
+# you will use `active:` to prioritize tasks already started even if the estimated amount is decreased
+urgency.active.coefficient = 3.0 
+urgency.scheduled.coefficient = 0.0 # tasks that are not scheduled may still be urgent
 
 # we need to be able to modify recurrent tasks without prompt
 recurrence.confirmation=no
 
 # suggested
-urgency.inherit=1
+urgency.inherit=1 # use dependencies to automatically prioritize tasks
 urgency.blocking.coefficient=2
 
+# give urgeny values to the estimated time
+# this is ln(estimation)
 urgency.uda.estimated.PT1H.coefficient = 1
 urgency.uda.estimated.PT2H.coefficient = 2.32
 urgency.uda.estimated.PT3H.coefficient = 3.67
@@ -127,11 +133,15 @@ urgency.uda.estimated.PT33H.coefficient = 11.73
 urgency.uda.estimated.PT34H.coefficient = 11.81
 urgency.uda.estimated.PT35H.coefficient = 11.89
 urgency.uda.estimated.PT36H.coefficient = 11.96
+# maximum duration is 36 hours
+
 ```
 
 ## CLI Options
 
 ```
+
 -v, --verbose: increase output verbosity
 -t, --today: how much time has been already used today (default: 0)
+
 ```
