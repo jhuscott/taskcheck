@@ -61,9 +61,10 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                     )
                     event_end = event_start + timedelta(days=1) - timedelta(seconds=1)
             if recurrence_id:
+                # TODO: reccurrence exceptions
                 continue  # Ignore recurrence exceptions here for simplicity
 
-            event_dates = rruleset()
+            occurrences = rruleset()
             if recurrence_rule:
                 # avoid handling rules that are already ended
                 # and don't create events beyond end_date
@@ -78,19 +79,21 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                     str(recurrence_rule.to_ical(), "utf-8"),
                     dtstart=event_start,
                 )
-                event_dates.rrule(rrule)  # type: ignore
+                occurrences.rrule(rrule)  # type: ignore
             else:
-                event_dates.rdate(event_start)
+                # if event is not recurring, add it as a single event
+                if event_start.date() >= today and event_end.date() <= end_date:
+                    occurrences.rdate(event_start)
 
-            for event_date in event_dates:
-                if today <= event_date.date() <= end_date:
-                    events.append(
-                        {
-                            # "summary": component.get("summary"),
-                            "start": event_date.isoformat(),
-                            "end": event_end.isoformat(),
-                        }
-                    )
+            for occurrence in occurrences:
+                end = occurrence + (event_end - event_start)
+                events.append(
+                    {
+                        # "summary": component.get("summary"),
+                        "start": occurrence.isoformat(),
+                        "end": end.isoformat(),
+                    }
+                )
 
     return events
 
