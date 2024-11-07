@@ -86,7 +86,7 @@ def parse_ical_events(ical_text, days_ahead, all_day):
                 if today <= event_date.date() <= end_date:
                     events.append(
                         {
-                            "summary": component.get("summary"),
+                            # "summary": component.get("summary"),
                             "start": event_date.isoformat(),
                             "end": event_end.isoformat(),
                         }
