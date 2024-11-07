@@ -88,9 +88,15 @@ def get_available_hours(time_map, date, calendars):
                     break
                 elif event["end"].date() < date:
                     continue
+
                 # check if the event overlaps with one of the working hours
                 event_start = event["start"].time()
                 event_end = event["end"].time()
+                if event["start"].date() < date:
+                    event_start = datetime(date.year, date.month, date.day, 0, 0).time()
+                if event["end"].date() > date:
+                    event_end = datetime(date.year, date.month, date.day, 23, 59).time()
+
                 if event_start < schedule_end and event_end > schedule_start:
                     schedule_blocked_hours += _time_to_decimal(
                         min(schedule_end, event_end)
@@ -210,6 +216,7 @@ def get_calendars(config):
             all_day=calendar["event_all_day_is_blocking"],
             expiration=calendar["expiration"],
             verbose=args.verbose,
+            tz_name=calendar.get("timezone"),
         )
         calendar.sort(key=lambda e: e["start"])
         calendars.append(calendar)
