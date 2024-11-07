@@ -141,7 +141,7 @@ def schedule_task_on_day(
     # we can schedule task on this day
     employable_hours = task_time_map[day_offset] - used_hours[day_offset]
     current_date = today + timedelta(days=day_offset)
-    if wait and current_date < wait:
+    if wait and current_date <= wait:
         if args.verbose:
             print(f"Skipping date {current_date} because of wait date {wait}")
         return start_date, end_date, task_remaining_hours, is_starting
@@ -243,10 +243,10 @@ def check_tasks_sequentially(tasks, config):
                         f"Task {task['id']} ('{task['description']}') has no estimated time or time map: {estimated_hours}, {time_map_names}"
                     )
                 continue
-            # if args.verbose:
-            #     print(
-            #         f"Checking task {task['id']} ('{task['description']}') with estimated hours: {estimated_hours} and wait date: {wait_date}"
-            #     )
+            if args.verbose:
+                print(
+                    f"Checking task {task['id']} ('{task['description']}') with estimated hours: {estimated_hours} and wait date: {wait_date}"
+                )
 
             task_remaining_hours = estimated_hours
             task_time_map = get_long_range_time_map(
