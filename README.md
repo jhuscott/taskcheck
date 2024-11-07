@@ -7,6 +7,7 @@ This is a taskwarrior extension checks if tasks can be completed on time, consid
 
 - [x] Use arbitrarily complex time maps
 - [x] Use ical to block time from scheduling (e.g. for meetings, vacations, etc.)
+- [ ] Support for recurrence exceptions
 - [ ] Implement scheduling algorithm for parallely working on multiple tasks
 - [ ] Use Google/Microsoft/Apple API to access calendars
 
