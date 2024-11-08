@@ -249,7 +249,7 @@ def check_tasks_sequentially(tasks, config):
     time_maps = config["time_maps"]
     today = datetime.today().date()
     todo = [True if t["status"] not in AVOID_STATUS else False for t in tasks]
-    used_hours = [0] * config["scheduler"]["days_ahead"]
+    used_hours = [0] * (config["scheduler"]["days_ahead"] + 1)
     calendars = get_calendars(config)
 
     while any(todo):
@@ -290,9 +290,7 @@ def check_tasks_sequentially(tasks, config):
             task_time_map, today_used_hours = get_long_range_time_map(
                 time_maps, time_map_names, config["scheduler"]["days_ahead"], calendars
             )
-            # task_time_map include the hours of today
-            # but used_hours does not, so we need to add today's hours to used_hours
-            used_hours = [today_used_hours] + used_hours
+            used_hours[0] += today_used_hours
 
             # Simulate work day-by-day until task is complete or past due
             is_starting = True
