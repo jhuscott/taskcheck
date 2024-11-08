@@ -12,14 +12,6 @@ config_dir = Path(appdirs.user_config_dir("task"))
 
 arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument(
-    "-t",
-    "--today",
-    type=float,
-    action="store",
-    help="specify how many hours you have already worked today (default: 0)",
-    default=0,
-)
-arg_parser.add_argument(
     "-v", "--verbose", action="store_true", help="increase output verbosity"
 )
 
@@ -59,6 +51,7 @@ def _hours_to_time(hour):
 
 
 def _time_to_decimal(time):
+    # round to 2 digits after the point
     return time.hour + time.minute / 60
 
 
@@ -142,7 +135,20 @@ def get_long_range_time_map(time_maps, time_map_names, days_ahead, calendars):
             task_time_map.append(daily_hours)
         long_range_time_map[key] = task_time_map
 
-    return task_time_map
+    today_time = _time_to_decimal(datetime.now().time())
+    today_weekday = datetime.today().strftime("%A").lower()
+    today_used_hours = 0
+    # compare with the time_maps of today
+    for time_map_name in time_map_names:
+        time_map = time_maps[time_map_name].get(today_weekday)
+        if time_map:
+            for schedule_start, schedule_end in time_map:
+                if schedule_start <= today_time <= schedule_end:
+                    today_used_hours += today_time - schedule_start
+                    break
+                elif today_time > schedule_end:
+                    today_used_hours += schedule_end - schedule_start
+    return task_time_map, today_used_hours
 
 
 def schedule_task_on_day(
@@ -159,6 +165,8 @@ def schedule_task_on_day(
 ):
     # we can schedule task on this day
     employable_hours = task_time_map[day_offset] - used_hours[day_offset]
+    # avoid using too small values
+    employable_hours = 0.01 if 0.01 > employable_hours > 0 else employable_hours
     current_date = today + timedelta(days=day_offset)
     if wait and current_date <= wait:
         if args.verbose:
@@ -171,11 +179,12 @@ def schedule_task_on_day(
         is_starting = False
         start_date = current_date
 
-    if task_remaining_hours <= employable_hours:
+    # minimum value we admit is 0.01 (1 minute)
+    if task_remaining_hours <= employable_hours + 0.01:
         # consume all the remaining task's hours
         if scheduling_note != "":
             scheduling_note += "\n"
-        scheduling_note += f"{current_date}: {task_remaining_hours} hours"
+        scheduling_note += f"{current_date}: {task_remaining_hours:.2f} hours"
         used_hours[day_offset] += task_remaining_hours
         task_remaining_hours = 0
         end_date = current_date
@@ -186,7 +195,7 @@ def schedule_task_on_day(
         # consume all the available hours on this task
         if scheduling_note != "":
             scheduling_note += "\n"
-        scheduling_note += f"{current_date}: {employable_hours} hours"
+        scheduling_note += f"{current_date}: {employable_hours:.2f} hours"
         task_remaining_hours -= employable_hours
         used_hours[day_offset] += employable_hours
         if args.verbose:
@@ -240,7 +249,7 @@ def check_tasks_sequentially(tasks, config):
     time_maps = config["time_maps"]
     today = datetime.today().date()
     todo = [True if t["status"] not in AVOID_STATUS else False for t in tasks]
-    used_hours = [args.today] + [0] * config["scheduler"]["days_ahead"]
+    used_hours = [0] * config["scheduler"]["days_ahead"]
     calendars = get_calendars(config)
 
     while any(todo):
@@ -278,9 +287,12 @@ def check_tasks_sequentially(tasks, config):
                 )
 
             task_remaining_hours = estimated_hours
-            task_time_map = get_long_range_time_map(
+            task_time_map, today_used_hours = get_long_range_time_map(
                 time_maps, time_map_names, config["scheduler"]["days_ahead"], calendars
             )
+            # task_time_map include the hours of today
+            # but used_hours does not, so we need to add today's hours to used_hours
+            used_hours = [today_used_hours] + used_hours
 
             # Simulate work day-by-day until task is complete or past due
             is_starting = True
