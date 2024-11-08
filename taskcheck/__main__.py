@@ -155,6 +155,7 @@ def schedule_task_on_day(
     today,
     used_hours,
     wait,
+    scheduling_note,
 ):
     # we can schedule task on this day
     employable_hours = task_time_map[day_offset] - used_hours[day_offset]
@@ -162,7 +163,7 @@ def schedule_task_on_day(
     if wait and current_date <= wait:
         if args.verbose:
             print(f"Skipping date {current_date} because of wait date {wait}")
-        return start_date, end_date, task_remaining_hours, is_starting
+        return start_date, end_date, task_remaining_hours, is_starting, scheduling_note
 
     if is_starting:
         if args.verbose:
@@ -172,6 +173,9 @@ def schedule_task_on_day(
 
     if task_remaining_hours <= employable_hours:
         # consume all the remaining task's hours
+        if scheduling_note != "":
+            scheduling_note += "\n"
+        scheduling_note += f"{current_date}: {task_remaining_hours} hours"
         used_hours[day_offset] += task_remaining_hours
         task_remaining_hours = 0
         end_date = current_date
@@ -180,14 +184,19 @@ def schedule_task_on_day(
             print(f"Used hours on {current_date}: {used_hours[day_offset]}")
     else:
         # consume all the available hours on this task
+        if scheduling_note != "":
+            scheduling_note += "\n"
+        scheduling_note += f"{current_date}: {employable_hours} hours"
         task_remaining_hours -= employable_hours
         used_hours[day_offset] += employable_hours
         if args.verbose:
             print(f"Working for {employable_hours} hours on task on {current_date}")
-    return start_date, end_date, task_remaining_hours, is_starting
+    return start_date, end_date, task_remaining_hours, is_starting, scheduling_note
 
 
-def mark_end_date(due_date, end_date, start_date, id, description=None):
+def mark_end_date(
+    due_date, end_date, start_date, scheduling_note, id, description=None
+):
     start_end_fields = [f"scheduled:{start_date}", f"completion_date:{end_date}"]
 
     subprocess.run(
@@ -196,6 +205,7 @@ def mark_end_date(due_date, end_date, start_date, id, description=None):
             str(id),
             "modify",
             *start_end_fields,
+            f'scheduling:"{scheduling_note}"',
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -274,27 +284,38 @@ def check_tasks_sequentially(tasks, config):
 
             # Simulate work day-by-day until task is complete or past due
             is_starting = True
+            scheduling_note = ""
             start_date = end_date = None
             for offset in range(len(task_time_map)):
                 if task_time_map[offset] > used_hours[offset]:
-                    (start_date, end_date, task_remaining_hours, is_starting) = (
-                        schedule_task_on_day(
-                            is_starting,
-                            offset,
-                            start_date,
-                            end_date,
-                            task_remaining_hours,
-                            task_time_map,
-                            today,
-                            used_hours,
-                            wait_date,
-                        )
+                    (
+                        start_date,
+                        end_date,
+                        task_remaining_hours,
+                        is_starting,
+                        scheduling_note,
+                    ) = schedule_task_on_day(
+                        is_starting,
+                        offset,
+                        start_date,
+                        end_date,
+                        task_remaining_hours,
+                        task_time_map,
+                        today,
+                        used_hours,
+                        wait_date,
+                        scheduling_note,
                     )
 
                 if end_date is not None:
                     todo[i] = False
                     mark_end_date(
-                        due_date, end_date, start_date, task["id"], task["description"]
+                        due_date,
+                        end_date,
+                        start_date,
+                        scheduling_note,
+                        task["id"],
+                        task["description"],
                     )
                     break
 
