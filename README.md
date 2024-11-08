@@ -34,6 +34,8 @@ You can exclude a task from being scheduled by removing the `time_map` or `estim
 
 You can see tasks that you can execute now with the `task ready` report.
 
+You can see the schedule for a task in the `scheduling` UDA.
+
 ## Configuration
 
 1. Create a TOML file at `~/.config/task/taskcheck.toml` with the following format:
@@ -79,6 +81,8 @@ uda.estimated.type = duration
 uda.estimated.label = Estimated Time
 uda.completion_date.type = date
 uda.completion_date.label = Expected Completion Date
+uda.scheduling.type = string
+uda.scheduling.label = Scheduling
 
 # Adjust urgency for taskcheck
 # you will use `wait:` to avoid scheduling tasks too much sooner
@@ -141,6 +145,5 @@ urgency.uda.estimated.PT36H.coefficient = 11.96
 ```
 
 -v, --verbose: increase output verbosity
--t, --today: how much time has been already used today (default: 0)
 
 ```
