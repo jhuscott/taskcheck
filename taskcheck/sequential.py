@@ -4,7 +4,7 @@ from taskcheck.common import (
     get_long_range_time_map,
     get_tasks,
     mark_end_date,
-    PDTH_to_hours,
+    pdth_to_hours,
     AVOID_STATUS,
 )
 
@@ -88,7 +88,7 @@ def check_tasks_sequentially(config, verbose=False):
                 else None
             )
             estimated_hours = (
-                PDTH_to_hours(task["estimated"]) if "estimated" in task else None
+                pdth_to_hours(task["estimated"]) if "estimated" in task else None
             )  # Remove trailing "PT" and "H"
             time_map_names = (
                 task.get("time_map").split(",") if "time_map" in task else None

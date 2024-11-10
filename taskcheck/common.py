@@ -24,17 +24,17 @@ def get_tasks():
     )
 
 
-def _hours_to_decimal(hour):
+def hours_to_decimal(hour):
     return int(hour) + (hour - int(hour)) * 100 / 60
 
 
-def _hours_to_time(hour):
+def hours_to_time(hour):
     hours = int(hour)
     minutes = int((hour - hours) * 100)
     return datetime.strptime(f"{hours}:{minutes}", "%H:%M").time()
 
 
-def _time_to_decimal(time):
+def time_to_decimal(time):
     # round to 2 digits after the point
     return time.hour + time.minute / 60
 
@@ -43,15 +43,15 @@ def get_available_hours(time_map, date, calendars, verbose=False):
     day_of_week = date.strftime("%A").lower()
     schedule = time_map.get(day_of_week, [])
     available_hours = sum(
-        _hours_to_decimal(end) - _hours_to_decimal(start) for start, end in schedule
+        hours_to_decimal(end) - hours_to_decimal(start) for start, end in schedule
     )
 
     blocked_hours = 0
     for schedule_start, schedule_end in schedule:
         # schedule_start and schedule_end are numbers, actually
         # so let's convert them to datetime.time objects
-        schedule_start = _hours_to_time(schedule_start)
-        schedule_end = _hours_to_time(schedule_end)
+        schedule_start = hours_to_time(schedule_start)
+        schedule_end = hours_to_time(schedule_end)
         schedule_blocked_hours = 0
         for calendar in calendars:
             for event in calendar:
@@ -75,9 +75,9 @@ def get_available_hours(time_map, date, calendars, verbose=False):
                     event_end = datetime(date.year, date.month, date.day, 23, 59).time()
 
                 if event_start < schedule_end and event_end > schedule_start:
-                    schedule_blocked_hours += _time_to_decimal(
+                    schedule_blocked_hours += time_to_decimal(
                         min(schedule_end, event_end)
-                    ) - _time_to_decimal(max(schedule_start, event_start))
+                    ) - time_to_decimal(max(schedule_start, event_start))
         if verbose and schedule_blocked_hours > 0:
             print(
                 f"Blocked hours on {date} between {schedule_start} and {schedule_end}: {schedule_blocked_hours}"
@@ -87,7 +87,7 @@ def get_available_hours(time_map, date, calendars, verbose=False):
     return available_hours
 
 
-def PDTH_to_hours(duration_str):
+def pdth_to_hours(duration_str):
     # string format is P#DT#H
     # with D and H optional
     duration_str = duration_str[1:]  # Remove leading "P"
@@ -100,7 +100,7 @@ def PDTH_to_hours(duration_str):
     return days * 24 + hours
 
 
-def hours_to_PDTH(hours):
+def hours_to_pdth(hours):
     days = hours // 24
     hours = hours % 24
     return f"P{days}DT{hours}H"
@@ -127,7 +127,7 @@ def get_long_range_time_map(
             task_time_map.append(daily_hours)
         long_range_time_map[key] = task_time_map
 
-    today_time = _time_to_decimal(datetime.now().time())
+    today_time = time_to_decimal(datetime.now().time())
     today_weekday = datetime.today().strftime("%A").lower()
     today_used_hours = 0
     # compare with the time_maps of today
