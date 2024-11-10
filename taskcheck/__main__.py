@@ -25,8 +25,7 @@ def main():
     config = load_config()
     algo = config["scheduler"].get("algorithm", "parallel")
     if algo == "parallel":
-        block = config["scheduler"].get("block", 2)
-        check_tasks_parallel(config, block, verbose=args.verbose)
+        check_tasks_parallel(config, verbose=args.verbose)
     elif algo == "sequential":
         check_tasks_sequentially(config, verbose=args.verbose)
     else:

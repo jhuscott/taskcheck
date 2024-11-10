@@ -46,7 +46,7 @@ def compute_estimated_urgency(remaining_hours, coefficients):
     return estimated_urgency
 
 
-def check_tasks_parallel(config, max_block, verbose=False):
+def check_tasks_parallel(config, verbose=False):
     """
     Takes the most urgent task and allocates max_block hours (or less), then recomputes the most
     urgent task given that the estimated time of the allocated task is decreased, and so the
@@ -87,6 +87,7 @@ def check_tasks_parallel(config, max_block, verbose=False):
             "estimated_urgency": compute_estimated_urgency(
                 estimated_hours, urgency_coefficients
             ),
+            "min_block": task["min_block"],
         }
 
     # For each day, allocate time to tasks
@@ -147,7 +148,6 @@ def check_tasks_parallel(config, max_block, verbose=False):
 
                 # Determine allocation amount
                 allocation = min(
-                    max_block,
                     task_remaining_hours,
                     task_daily_available,
                     day_remaining_hours,
@@ -155,6 +155,8 @@ def check_tasks_parallel(config, max_block, verbose=False):
 
                 if allocation <= 0:
                     continue
+                elif allocation > info["min_block"]:
+                    allocation = info["min_block"]
 
                 # Allocate time
                 info["remaining_hours"] -= allocation
