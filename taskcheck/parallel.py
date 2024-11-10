@@ -92,7 +92,6 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
             "scheduling": {},
             "urgency": initial_urgency,
             "estimated_urgency": estimated_urgency,
-            "min_block": task["min_block"],
         }
     return task_info
 
@@ -178,7 +177,7 @@ def allocate_time_to_task(info, day_offset, day_remaining_hours):
         info["remaining_hours"],
         task_daily_available,
         day_remaining_hours,
-        info["min_block"],
+        info["task"]["min_block"],
     )
 
     if allocation <= 0:
