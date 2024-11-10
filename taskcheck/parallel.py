@@ -47,23 +47,27 @@ def compute_estimated_urgency(remaining_hours, coefficients):
 
 
 def check_tasks_parallel(config, verbose=False):
-    """
-    Takes the most urgent task and allocates max_block hours (or less), then recomputes the most
-    urgent task given that the estimated time of the allocated task is decreased, and so the
-    urgency. The new urgency for that task's estimated value is computed by using the "estimated" urgency factor from
-    the command line: `task _show`, which should be grepped for line starting with
-    `urgency.uda.estimated.{hours_to_PDTH(task_remaining_hours)}.coefficient=`.
-    """
     tasks = get_tasks()
     time_maps = config["time_maps"]
-    today = datetime.today().date()
     days_ahead = config["scheduler"]["days_ahead"]
     calendars = get_calendars(config)
-
-    # Fetch urgency coefficients from Taskwarrior
+    today = datetime.today().date()
     urgency_coefficients = get_urgency_coefficients()
 
-    # Initialize task info: remaining estimated hours, initial urgency
+    task_info = initialize_task_info(
+        tasks, time_maps, days_ahead, urgency_coefficients, calendars
+    )
+
+    for day_offset in range(days_ahead):
+        date = today + timedelta(days=day_offset)
+        allocate_time_for_day(
+            task_info, day_offset, date, urgency_coefficients, verbose
+        )
+
+    update_tasks_with_scheduling_info(task_info, verbose)
+
+
+def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, calendars):
     task_info = {}
     for task in tasks:
         if task.get("status") in AVOID_STATUS:
@@ -77,6 +81,9 @@ def check_tasks_parallel(config, verbose=False):
         )
         task_uuid = task["uuid"]
         initial_urgency = float(task.get("urgency", 0))
+        estimated_urgency = compute_estimated_urgency(
+            estimated_hours, urgency_coefficients
+        )
         task_info[task_uuid] = {
             "task": task,
             "remaining_hours": estimated_hours,
@@ -84,132 +91,124 @@ def check_tasks_parallel(config, verbose=False):
             "today_used_hours": today_used_hours,
             "scheduling": {},
             "urgency": initial_urgency,
-            "estimated_urgency": compute_estimated_urgency(
-                estimated_hours, urgency_coefficients
-            ),
+            "estimated_urgency": estimated_urgency,
             "min_block": task["min_block"],
         }
+    return task_info
 
-    # For each day, allocate time to tasks
-    for day_offset in range(days_ahead):
-        date = today + timedelta(days=day_offset)
-        # Calculate the day's total available hours by finding the maximum available hours among all tasks
-        if day_offset == 0:
-            total_hours_list = [
-                info["task_time_map"][day_offset] - info["today_used_hours"]
-                for info in task_info.values()
-            ]
-        else:
-            total_hours_list = [
-                info["task_time_map"][day_offset] for info in task_info.values()
-            ]
-        total_available_hours = max(total_hours_list) if total_hours_list else 0
 
-        if verbose:
-            print(f"Day {date}, total available hours: {total_available_hours:.2f}")
-        if total_available_hours <= 0:
-            continue
+def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, verbose):
+    total_available_hours = compute_total_available_hours(task_info, day_offset)
+    if verbose:
+        print(f"Day {date}, total available hours: {total_available_hours:.2f}")
+    if total_available_hours <= 0:
+        return
 
-        # Keep track of day's remaining available hours
-        day_remaining_hours = total_available_hours
+    day_remaining_hours = total_available_hours
+    tasks_remaining = prepare_tasks_remaining(task_info, day_offset)
 
-        # Prepare a list of tasks that can be scheduled on this day
-        tasks_remaining = [
-            info
-            for info in task_info.values()
-            if info["remaining_hours"] > 0 and info["task_time_map"][day_offset] > 0
-        ]
+    while day_remaining_hours > 0 and tasks_remaining:
+        recompute_urgencies(tasks_remaining, urgency_coefficients)
+        tasks_remaining.sort(key=lambda x: -x["urgency"])
 
-        while day_remaining_hours > 0 and tasks_remaining:
-            # Recompute urgencies based on remaining estimated hours
-            for info in tasks_remaining:
-                remaining_hours = info["remaining_hours"]
-                estimated_urgency = compute_estimated_urgency(
-                    remaining_hours, urgency_coefficients
-                )
-                # urgency is estimated_urgency + k, so we adjust it accordingly to the component
-                # tied to the estimated time
-                _old_estimated_urgeny = info["estimated_urgency"]
-                info["estimated_urgency"] = estimated_urgency
-                info["urgency"] = (
-                    info["urgency"] - _old_estimated_urgeny + estimated_urgency
-                )
-
-            # Sort tasks by urgency in descending order
-            tasks_remaining.sort(key=lambda x: -x["urgency"])
-
-            allocated = False
-            for info in tasks_remaining:
-                task = info["task"]
-                task_remaining_hours = info["remaining_hours"]
-                task_daily_available = info["task_time_map"][day_offset]
-                if task_daily_available <= 0:
-                    continue  # Task not available on this day
-
-                # Determine allocation amount
-                allocation = min(
-                    task_remaining_hours,
-                    task_daily_available,
-                    day_remaining_hours,
-                )
-
-                if allocation <= 0:
-                    continue
-                elif allocation > info["min_block"]:
-                    allocation = info["min_block"]
-
-                # Allocate time
-                info["remaining_hours"] -= allocation
+        allocated = False
+        for info in tasks_remaining.copy():
+            allocation = allocate_time_to_task(info, day_offset, day_remaining_hours)
+            if allocation > 0:
                 day_remaining_hours -= allocation
-                info["task_time_map"][day_offset] -= allocation
-
-                # Record allocation per day
-                date_str = date.isoformat()
-                if date_str not in info["scheduling"]:
-                    info["scheduling"][date_str] = 0
-                info["scheduling"][date_str] += allocation
-
                 allocated = True
+                date_str = date.isoformat()
+                update_task_scheduling(info, allocation, date_str)
                 if verbose:
                     print(
-                        f"Allocated {allocation:.2f} hours to task {task['id']} on {date}"
+                        f"Allocated {allocation:.2f} hours to task {info['task']['id']} on {date}"
                     )
-
-                # Update tasks_remaining for next iteration
-                # Remove task if fully allocated or no more available time today
                 if (
                     info["remaining_hours"] <= 0
                     or info["task_time_map"][day_offset] <= 0
                 ):
-                    tasks_remaining = [
-                        i
-                        for i in tasks_remaining
-                        if i["task"]["uuid"] != info["task"]["uuid"]
-                    ]
+                    tasks_remaining.remove(info)
                 if day_remaining_hours <= 0:
-                    break  # No more time in day
+                    break
+        if not allocated:
+            break
+    if verbose and day_remaining_hours > 0:
+        print(f"Unused time on {date}: {day_remaining_hours:.2f} hours")
 
-            if not allocated:
-                # No tasks could be allocated time
-                break  # Exit loop
 
-        if verbose and day_remaining_hours > 0:
-            print(f"Unused time on {date}: {day_remaining_hours:.2f} hours")
+def compute_total_available_hours(task_info, day_offset):
+    if day_offset == 0:
+        total_hours_list = [
+            info["task_time_map"][day_offset] - info["today_used_hours"]
+            for info in task_info.values()
+        ]
+    else:
+        total_hours_list = [
+            info["task_time_map"][day_offset] for info in task_info.values()
+        ]
+    total_available_hours = max(total_hours_list) if total_hours_list else 0
+    return total_available_hours
 
-    # After scheduling, update tasks with scheduling info
+
+def prepare_tasks_remaining(task_info, day_offset):
+    return [
+        info
+        for info in task_info.values()
+        if info["remaining_hours"] > 0 and info["task_time_map"][day_offset] > 0
+    ]
+
+
+def recompute_urgencies(tasks_remaining, urgency_coefficients):
+    for info in tasks_remaining:
+        remaining_hours = info["remaining_hours"]
+        estimated_urgency = compute_estimated_urgency(
+            remaining_hours, urgency_coefficients
+        )
+        _old_estimated_urgency = info["estimated_urgency"]
+        info["estimated_urgency"] = estimated_urgency
+        info["urgency"] = info["urgency"] - _old_estimated_urgency + estimated_urgency
+
+
+def allocate_time_to_task(info, day_offset, day_remaining_hours):
+    task_daily_available = info["task_time_map"][day_offset]
+    if task_daily_available <= 0:
+        return 0
+
+    allocation = min(
+        info["remaining_hours"],
+        task_daily_available,
+        day_remaining_hours,
+        info["min_block"],
+    )
+
+    if allocation <= 0:
+        return 0
+
+    info["remaining_hours"] -= allocation
+    info["task_time_map"][day_offset] -= allocation
+
+    return allocation
+
+
+def update_task_scheduling(info, allocation, date_str):
+    if date_str not in info["scheduling"]:
+        info["scheduling"][date_str] = 0
+    info["scheduling"][date_str] += allocation
+
+
+def update_tasks_with_scheduling_info(task_info, verbose):
     for info in task_info.values():
         task = info["task"]
         scheduling_note = ""
         scheduled_dates = sorted(info["scheduling"].keys())
         if not scheduled_dates:
-            continue  # Task was not scheduled
+            continue
         start_date = scheduled_dates[0]
         end_date = scheduled_dates[-1]
         for date_str in scheduled_dates:
             hours = info["scheduling"][date_str]
             scheduling_note += f"{date_str}: {hours:.2f} hours\n"
 
-        # Update task in Taskwarrior
         subprocess.run(
             [
                 "task",
