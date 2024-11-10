@@ -128,8 +128,8 @@ def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, ver
                     or info["task_time_map"][day_offset] <= 0
                 ):
                     tasks_remaining.remove(info)
-                if day_remaining_hours <= 0:
-                    break
+                # if day_remaining_hours <= 0:
+                break
         if not allocated:
             break
     if verbose and day_remaining_hours > 0:
