@@ -1,5 +1,6 @@
 import subprocess
 import re
+from dataclasses import dataclass
 
 from datetime import datetime, timedelta
 from taskcheck.common import (
@@ -13,6 +14,13 @@ from taskcheck.common import (
 )
 
 
+@dataclass
+class UrgencyCoefficients:
+    estimated: dict
+    inherit: bool
+    active: float
+
+
 def get_urgency_coefficients():
     """
     Retrieves urgency coefficients from Taskwarrior configurations.
@@ -21,23 +29,31 @@ def get_urgency_coefficients():
     """
     result = subprocess.run(["task", "_show"], capture_output=True, text=True)
     inherit_urgency = False
+    active_task_coefficient = 0
     coefficients = {}
     pattern1 = re.compile(r"^urgency\.uda\.estimated\.(.+)\.coefficient=(.+)$")
     pattern2 = re.compile(r"^urgency\.inherit=(.+)$")
+    pattern3 = re.compile(r"^urgency\.active.coefficient=(.+)$")
     for line in result.stdout.splitlines():
         match = pattern1.match(line)
         if match:
             estimated_value = match.group(1)
             coefficient = float(match.group(2))
             coefficients[estimated_value] = coefficient
+
         match = pattern2.match(line)
         if match:
             inherit_urgency = match.group(1) == "1"
 
-    return coefficients, inherit_urgency
+        match = pattern3.match(line)
+        if match:
+            active_coefficient = float(match.group(1))
+            active_task_coefficient = active_coefficient
+
+    return UrgencyCoefficients(coefficients, inherit_urgency, active_task_coefficient)
 
 
-def compute_estimated_urgency(remaining_hours, coefficients):
+def compute_estimated_urgency(remaining_hours, urgency_coefficients):
     """
     Computes the estimated urgency for the given remaining hours using the coefficients.
     """
@@ -45,10 +61,10 @@ def compute_estimated_urgency(remaining_hours, coefficients):
     pdth_value = hours_to_pdth(remaining_hours)
     # Find the closest match (e.g., if '2h' is not available, use '1h' or '3h')
     closest_match = min(
-        coefficients.keys(),
+        urgency_coefficients.estimated.keys(),
         key=lambda x: abs(int(pdth_value[1]) - int(pdth_to_hours(x[1]))),
     )
-    coefficient = coefficients[closest_match]
+    coefficient = urgency_coefficients.estimated[closest_match]
     # Compute the urgency
     estimated_urgency = coefficient * remaining_hours
     return estimated_urgency
@@ -60,7 +76,7 @@ def check_tasks_parallel(config, verbose=False):
     days_ahead = config["scheduler"]["days_ahead"]
     calendars = get_calendars(config)
     today = datetime.today().date()
-    urgency_coefficients, inherit_urgency = get_urgency_coefficients()
+    urgency_coefficients = get_urgency_coefficients()
 
     task_info = initialize_task_info(
         tasks, time_maps, days_ahead, urgency_coefficients, calendars
@@ -69,7 +85,7 @@ def check_tasks_parallel(config, verbose=False):
     for day_offset in range(days_ahead):
         date = today + timedelta(days=day_offset)
         allocate_time_for_day(
-            task_info, day_offset, date, urgency_coefficients, inherit_urgency, verbose
+            task_info, day_offset, date, urgency_coefficients, verbose
         )
 
     update_tasks_with_scheduling_info(task_info, verbose)
@@ -100,13 +116,12 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
             "scheduling": {},
             "urgency": initial_urgency,
             "estimated_urgency": estimated_urgency,
+            "started": False,
         }
     return task_info
 
 
-def allocate_time_for_day(
-    task_info, day_offset, date, urgency_coefficients, inherit_urgency, verbose
-):
+def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, verbose):
     total_available_hours = compute_total_available_hours(task_info, day_offset)
     if verbose:
         print(f"Day {date}, total available hours: {total_available_hours:.2f}")
@@ -117,7 +132,7 @@ def allocate_time_for_day(
     tasks_remaining = prepare_tasks_remaining(task_info, day_offset)
 
     while day_remaining_hours > 0 and tasks_remaining:
-        recompute_urgencies(tasks_remaining, urgency_coefficients, inherit_urgency)
+        recompute_urgencies(tasks_remaining, urgency_coefficients)
         sorted_task_ids = sorted(
             tasks_remaining.keys(),
             key=lambda x: (tasks_remaining[x]["urgency"], x),
@@ -125,10 +140,14 @@ def allocate_time_for_day(
         )
 
         allocated = False
-        for id in sorted_task_ids:
-            if id not in tasks_remaining:
+        for uuid in sorted_task_ids:
+            if uuid not in tasks_remaining:
+                # already completed
                 continue
-            info = tasks_remaining[id]
+            info = tasks_remaining[uuid]
+            if any(d in tasks_remaining for d in info["task"].get("depends", [])):
+                # cannot execute this task until all its dependencies are completed
+                continue
             allocation = allocate_time_to_task(info, day_offset, day_remaining_hours)
             if allocation > 0:
                 day_remaining_hours -= allocation
@@ -143,7 +162,7 @@ def allocate_time_for_day(
                     info["remaining_hours"] <= 0
                     or info["task_time_map"][day_offset] <= 0
                 ):
-                    del tasks_remaining[id]
+                    del tasks_remaining[uuid]
                 # if day_remaining_hours <= 0:
                 break
         if not allocated:
@@ -168,13 +187,13 @@ def compute_total_available_hours(task_info, day_offset):
 
 def prepare_tasks_remaining(task_info, day_offset):
     return {
-        info["task"]["id"]: info
+        info["task"]["uuid"]: info
         for info in task_info.values()
         if info["remaining_hours"] > 0 and info["task_time_map"][day_offset] > 0
     }
 
 
-def recompute_urgencies(tasks_remaining, urgency_coefficients, inherit_urgency):
+def recompute_urgencies(tasks_remaining, urgency_coefficients):
     # Recompute estimated urgencies as before
     for info in tasks_remaining.values():
         remaining_hours = info["remaining_hours"]
@@ -184,23 +203,28 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients, inherit_urgency):
         _old_estimated_urgency = info["estimated_urgency"]
         info["estimated_urgency"] = estimated_urgency
         info["urgency"] = info["urgency"] - _old_estimated_urgency + estimated_urgency
+        started_by_user = info["task"].get("start", "") != ""
+        started_by_scheduler = info["started"]
+        if started_by_scheduler and not started_by_user:
+            # If the task was started by the scheduler, apply the active task coefficient
+            info["urgency"] += urgency_coefficients.active
 
-    if inherit_urgency:
+    if urgency_coefficients.inherit:
         # Define a recursive function to compute the maximum urgency
         def get_max_urgency(info, visited):
-            task_id = info["task"]["id"]
-            if task_id in visited:
-                return visited[task_id]  # Return cached value to avoid cycles
+            task_uuid = info["task"]["uuid"]
+            if task_uuid in visited:
+                return visited[task_uuid]  # Return cached value to avoid cycles
             # Start with the current task's urgency
             urgency = info["urgency"]
-            visited[task_id] = urgency  # Mark as visited
+            visited[task_uuid] = urgency  # Mark as visited
             # Recursively compute urgencies of dependents
-            for dep_id in info["task"].get("depends", []):
-                if dep_id in tasks_remaining:
-                    dep_info = tasks_remaining[dep_id]
+            for dep_uuid in info["task"].get("depends", []):
+                if dep_uuid in tasks_remaining:
+                    dep_info = tasks_remaining[dep_uuid]
                     dep_urgency = get_max_urgency(dep_info, visited)
                     urgency = max(urgency, dep_urgency)
-            visited[task_id] = urgency  # Update with the maximum urgency found
+            visited[task_uuid] = urgency  # Update with the maximum urgency found
             return urgency
 
         # Update urgencies based on dependents
@@ -227,6 +251,7 @@ def allocate_time_to_task(info, day_offset, day_remaining_hours):
 
     info["remaining_hours"] -= allocation
     info["task_time_map"][day_offset] -= allocation
+    info["started"] = True
 
     return allocation
 
