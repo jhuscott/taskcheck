@@ -9,6 +9,12 @@ arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument(
     "-v", "--verbose", action="store_true", help="increase output verbosity"
 )
+arg_parser.add_argument(
+    "-i",
+    "--install",
+    action="store_true",
+    help="install the UDAs, required settings, and default config file",
+)
 
 args = arg_parser.parse_args()
 
@@ -22,6 +28,12 @@ def load_config():
 
 def main():
     # Load data and check tasks
+    if args.install:
+        from taskcheck.install import install
+
+        install()
+        return
+
     config = load_config()
     algo = config["scheduler"].get("algorithm", "parallel")
     if algo == "parallel":
