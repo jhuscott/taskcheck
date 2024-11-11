@@ -90,6 +90,8 @@ def install():
         ("urgency.inherit", "1"),
         ("urgency.blocked.coefficient", "0"),
         ("urgency.blocking.coefficient", "0"),
+        ("urgency.waiting.coefficient", "0"),
+        ("urgency.scheduled.coefficient", "0"),
     ]
 
     answer = input(
@@ -108,6 +110,7 @@ Do you want to continue? [y/N]"""
 - better `ready` report columns
 - turning off printing journal logs in the task details
 - turning on urgency inheritance from dependant tasks and disabling blocked and blocking urgency coefficients (as recommended by Taskwarrior documentation)
+- turning off urgency for waiting and scheduled tasks (taskcheck already take them into account)
 
 Do you want to apply optional configurations? [y/N]"""
     )
