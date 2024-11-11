@@ -88,6 +88,8 @@ def install():
         ),
         ("journal.info", "0"),
         ("urgency.inherit", "1"),
+        ("urgency.blocked.coefficient", "0"),
+        ("urgency.blocking.coefficient", "0"),
     ]
 
     answer = input(
@@ -105,7 +107,7 @@ Do you want to continue? [y/N]"""
 - urgency coefficients for estimated time (up to 36 hour duration)
 - better `ready` report columns
 - turning off printing journal logs in the task details
-- turning on urgency inheritance from dependant tasks 
+- turning on urgency inheritance from dependant tasks and disabling blocked and blocking urgency coefficients (as recommended by Taskwarrior documentation)
 
 Do you want to apply optional configurations? [y/N]"""
     )
