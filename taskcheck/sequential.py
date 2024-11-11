@@ -54,7 +54,7 @@ def schedule_task_on_day(
         # consume all the available hours on this task
         if scheduling_note != "":
             scheduling_note += "\n"
-        scheduling_note += f"{current_date}: {employable_hours:.2f} hours"
+        scheduling_note += f"{current_date}T00:00:00 - {employable_hours:.2f} hours"
         task_remaining_hours -= employable_hours
         used_hours[day_offset] += employable_hours
         if verbose:

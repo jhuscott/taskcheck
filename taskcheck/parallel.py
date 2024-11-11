@@ -248,7 +248,7 @@ def update_tasks_with_scheduling_info(task_info, verbose):
         end_date = scheduled_dates[-1]
         for date_str in scheduled_dates:
             hours = info["scheduling"][date_str]
-            scheduling_note += f"{date_str}: {hours:.2f} hours\n"
+            scheduling_note += f"{date_str}T00:00:00 - {hours:.2f} hours\n"
 
         subprocess.run(
             [
