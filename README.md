@@ -8,7 +8,8 @@ This is a taskwarrior extension checks if tasks can be completed on time, consid
 - [x] Use arbitrarily complex time maps
 - [x] Use ical to block time from scheduling (e.g. for meetings, vacations, etc.)
 - [x] Implement scheduling algorithm for parallely working on multiple tasks
-- [ ] Use Google/Microsoft/Apple API to access calendars
+- [ ] Use Google API to access calendars
+- [ ] Export tasks to iCal calendar and API calendars
 
 ## Install
 
@@ -20,29 +21,33 @@ This is a taskwarrior extension checks if tasks can be completed on time, consid
 This extension parses your pending and waiting tasks sorted decreasingly by urgency and tries to schedule them in the future.
 It considers their estimated time to schedule all tasks starting from the most urgent one.
 
-You will need to add the `estimated` and `time_map` UDAs to your tasks. The `estimated` attribute is
+Taskcheck leverages to UDAs, `estimated` and `time_map`. The `estimated` attribute is
 the expected time to complete the task in hours. The `time_map` is a comma-separated list of strings
 that indicates the hours per day in which you will work on a task (e.g. `work`, `weekend`, etc.).
 The exact correspondence between the `time_map` and the hours of the day is defined in the configuration
-file of taskcheck.
+file of taskcheck. For instance:
 
-`taskcheck` will modify the Taskwarrior tasks by adding the `completion_date` attribute with the expected
+```toml
+```toml
+[time_maps]
+# get an error)
+[time_maps.work]
+monday = [[9, 12.30], [14, 17]]
+tuesday = [[9, 12.30], [14, 17]]
+# ...
+```
+
+Taskcheck will also parse online iCal calendars (Google, Apple, etc.) and will match them with your time maps.
+It will then modify the Taskwarrior tasks by adding the `completion_date` attribute with the expected
 date of completion and the `scheduled` attribute with the date in which the task is expected to
 start.
 
 It will also print a red line for every task whose `completion_date` is after its `due_date`.
 
-You can exclude a task from being scheduled by removing the `time_map` or `estimated` attributes.
-
-You can see tasks that you can execute now with the `task ready` report.
-
-You can see the schedule for a task in the `scheduling` UDA, e.g. `task scheduling:$(task calc
-tomorrow)` will show you the tasks that include a scheduling for tomorrow.
-
 In general, it is recommended to run taskcheck rather frequently and at least once at the beginning
 of your working day.
 
-### Algorithms
+## Algorithms
 
 Taskcheck provides two scheduling algorithms: `parallel` and `sequential`.
 
@@ -113,6 +118,13 @@ url = "https://www.officeholidays.com/ics-clean/italy/milan"
 event_all_day_is_blocking = true
 expiration = 720 # in hours (720 hours = 30 days)
 ```
+
+## Tips and Tricks
+
+- You can exclude a task from being scheduled by removing the `time_map` or `estimated` attributes.
+- You can see tasks that you can execute now with the `task ready` report.
+- You can see the schedule for a task in the `scheduling` UDA, e.g. `task scheduling:$(task calc
+tomorrow)` will show you the tasks that include a scheduling for tomorrow.
 
 ## CLI Options
 
