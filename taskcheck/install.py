@@ -95,24 +95,28 @@ def install():
     ]
 
     answer = input(
-        """Required configuration for taskcheck includes:
+        """
+_________________________________________________________________________________________
+Required configuration for taskcheck includes:
 - 3 UDA fields 
 - turning off confirmation for recurring tasks 
 
-Do you want to continue? [y/N]"""
+Do you want to continue? [y/N] """
     )
     if answer.lower() not in ["y", "yes"]:
         return
 
     answer = input(
-        """Optional configuration for taskcheck includes:
+        """
+_________________________________________________________________________________________
+Optional configuration for taskcheck includes:
 - urgency coefficients for estimated time (up to 36 hour duration)
 - better `ready` report columns
 - turning off printing journal logs in the task details
 - turning on urgency inheritance from dependant tasks and disabling blocked and blocking urgency coefficients (as recommended by Taskwarrior documentation)
 - turning off urgency for waiting and scheduled tasks (taskcheck already take them into account)
 
-Do you want to apply optional configurations? [y/N]"""
+Do you want to apply optional configurations? [y/N] """
     )
     if answer.lower() not in ["y", "yes"]:
         configs = required_configs
@@ -128,7 +132,9 @@ Do you want to apply optional configurations? [y/N]"""
         print(f"Failed to apply configurations: {e}")
 
     answer = input(
-        """Do you want to create a default config file for taskcheck? [y/N]"""
+        """
+_________________________________________________________________________________________
+Do you want to create a default config file for taskcheck? [y/N] """
     )
     if answer.lower() not in ["y", "yes"]:
         return
