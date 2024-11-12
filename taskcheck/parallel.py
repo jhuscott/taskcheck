@@ -57,12 +57,10 @@ def compute_estimated_urgency(remaining_hours, urgency_coefficients):
     """
     Computes the estimated urgency for the given remaining hours using the coefficients.
     """
-    # Convert remaining hours to PDTH format used in the coefficients
-    pdth_value = hours_to_pdth(remaining_hours)
     # Find the closest match (e.g., if '2h' is not available, use '1h' or '3h')
     closest_match = min(
         urgency_coefficients.estimated.keys(),
-        key=lambda x: abs(int(pdth_value[1]) - int(pdth_to_hours(x[1]))),
+        key=lambda x: abs(pdth_to_hours(x) - remaining_hours),
     )
     coefficient = urgency_coefficients.estimated[closest_match]
     # Compute the urgency
@@ -273,7 +271,7 @@ def update_tasks_with_scheduling_info(task_info, verbose):
         end_date = scheduled_dates[-1]
         for date_str in scheduled_dates:
             hours = info["scheduling"][date_str]
-            scheduling_note += f"{date_str}T00:00:00 - {hours:.2f} hours\n"
+            scheduling_note += f"{date_str} - {hours_to_pdth(hours)}\n"
 
         subprocess.run(
             [

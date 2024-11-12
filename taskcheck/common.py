@@ -103,10 +103,22 @@ def pdth_to_hours(duration_str):
 
 
 def hours_to_pdth(hours):
-    days = hours // 24
-    hours = hours % 24
-    minutes = (hours - int(hours)) * 60
-    return f"P{days}DT{hours}H{minutes}M"
+    days_ = hours / 24
+    hours_ = hours % 24
+    minutes_ = int(round((hours_ - int(hours_)) * 60))
+    days_ = int(days_)
+    hours_ = int(hours_)
+    minutes_ = int(minutes_)
+    ret = "P"
+    if days_ == 0:
+        ret += "T"
+    else:
+        ret += f"{days_}DT"
+    if hours_ > 0:
+        ret += f"{hours_}H"
+    if minutes_ > 0:
+        ret += f"{minutes_}M"
+    return ret
 
 
 def get_long_range_time_map(
