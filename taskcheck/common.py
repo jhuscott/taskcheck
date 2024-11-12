@@ -91,19 +91,22 @@ def pdth_to_hours(duration_str):
     # string format is P#DT#H
     # with D and H optional
     duration_str = duration_str[1:]  # Remove leading "P"
-    days, hours = 0, 0
+    days, hours, minutes = 0, 0, 0
     if "D" in duration_str:
         days, duration_str = duration_str.split("D")
         days = int(days)
     if "H" in duration_str:
         hours = int(duration_str.split("T")[1].split("H")[0])
-    return days * 24 + hours
+    if "M" in duration_str:
+        minutes = int(duration_str.split("H")[1].split("M")[0])
+    return days * 24 + hours + minutes / 60
 
 
 def hours_to_pdth(hours):
     days = hours // 24
     hours = hours % 24
-    return f"P{days}DT{hours}H"
+    minutes = (hours - int(hours)) * 60
+    return f"P{days}DT{hours}H{minutes}M"
 
 
 def get_long_range_time_map(
