@@ -3,6 +3,10 @@
 
 This is a taskwarrior extension checks if tasks can be completed on time, considering estimated time and working hours.
 
+<p align="center">
+<img src="https://github.com/user-attachments/assets/4d9ad77c-92ae-4ca4-9a1b-d64153e58ed3"/>
+</p>
+
 ## Features
 
 - [x] Use arbitrarily complex time maps
