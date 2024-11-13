@@ -118,6 +118,8 @@ def hours_to_pdth(hours):
         ret += f"{hours_}H"
     if minutes_ > 0:
         ret += f"{minutes_}M"
+    if ret == "PT":
+        print("Warning: hours_to_pdth() returned 'PT' for hours = ", hours)
     return ret
 
 

@@ -244,7 +244,7 @@ def allocate_time_to_task(info, day_offset, day_remaining_hours):
         hours_to_decimal(info["task"].get("min_block", 2)),
     )
 
-    if allocation <= 0:
+    if allocation <= 0.05:
         return 0
 
     info["remaining_hours"] -= allocation

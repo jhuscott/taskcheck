@@ -28,7 +28,6 @@ The exact correspondence between the `time_map` and the hours of the day is defi
 file of taskcheck. For instance:
 
 ```toml
-```toml
 [time_maps]
 # get an error)
 [time_maps.work]
