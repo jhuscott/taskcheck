@@ -95,7 +95,7 @@ def generate_report(config, constraint, verbose=False):
                 task_id = f"[bold green]#{task['id']}[/bold green]"
                 project = task["project"]
                 description = Text(task["description"], style="white")
-                hours = f"[yellow]{task['scheduling_hours']}h[/yellow]"
+                hours = f"[yellow]{task['scheduling_hours']}[/yellow]"
                 urgency = f"[bold]{task['urgency']}[/bold]"
                 due = task["due"]
                 if due != "" and due < timedelta(days=5):
