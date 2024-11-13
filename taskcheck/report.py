@@ -31,8 +31,6 @@ def get_tasks(config, tasks, year, month, day):
                         "description": task["description"],
                         "scheduling_day": f"{year}-{month}-{day}",
                         "scheduling_hours": m.group(1),
-                        "urgency": task["urgency"],
-                        "due": due,
                         **{
                             attr: task.get(attr, "")
                             for attr in config.get("additional_attributes", [])
@@ -72,6 +70,21 @@ def get_days_in_constraint(constraint):
         current_date += timedelta(days=1)
 
 
+def tostring(value):
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    elif isinstance(value, datetime):
+        return value.strftime("%Y-%m-%d %H:%M")
+    elif isinstance(value, str):
+        try:
+            date = datetime.strptime(value, "%Y%m%dT%H%M%SZ")
+            return date.strftime("%Y-%m-%d %H:%M")
+        except ValueError:
+            return value
+    else:
+        return str(value)
+
+
 def generate_report(config, constraint, verbose=False):
     config = config["report"]
     console = Console()
@@ -93,22 +106,14 @@ def generate_report(config, constraint, verbose=False):
             table.add_column("Project", style="dim", width=12)
             table.add_column("Description")
             table.add_column("Time", justify="right")
-            table.add_column("Urgency")
-            table.add_column("Due date")
             for attr in config.get("additional_attributes", []):
-                table.add_column(attr)
+                table.add_column(attr.capitalize(), justify="right")
 
             for task in this_day_tasks:
                 task_id = f"[bold green]#{task['id']}[/bold green]"
                 project = task["project"]
                 description = Text(task["description"], style="white")
                 hours = f"[yellow]{task['scheduling_hours']}[/yellow]"
-                urgency = f"[bold]{task['urgency']}[/bold]"
-                due = task["due"]
-                if due != "" and due < timedelta(days=5):
-                    due = f"[red]{due.days}d[/red]"
-                elif due != "":
-                    due = f"[green]{due.days}d[/green]"
 
                 # Add an emoji based on a keyword in the description
                 for keyword in config.get("emoji_keywords", []):
@@ -123,10 +128,8 @@ def generate_report(config, constraint, verbose=False):
                     project,
                     description,
                     hours,
-                    urgency,
-                    due,
                     *[
-                        task.get(attr, "")
+                        tostring(task.get(attr, ""))
                         for attr in config.get("additional_attributes", [])
                     ],
                 )
