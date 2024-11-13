@@ -13,7 +13,7 @@ from rich.text import Text
 from rich.panel import Panel
 
 
-def get_tasks(tasks, year, month, day):
+def get_tasks(config, tasks, year, month, day):
     regex = re.compile(rf"{year}-{month}-{day} - ([PDTHM0-9]+)")
     valid_tasks = []
     for task in tasks:
@@ -33,6 +33,10 @@ def get_tasks(tasks, year, month, day):
                         "scheduling_hours": m.group(1),
                         "urgency": task["urgency"],
                         "due": due,
+                        **{
+                            attr: task.get(attr, "")
+                            for attr in config.get("additional_attributes", [])
+                        },
                     }
                 )
     valid_tasks = sorted(valid_tasks, key=lambda x: x["urgency"], reverse=True)
@@ -69,6 +73,7 @@ def get_days_in_constraint(constraint):
 
 
 def generate_report(config, constraint, verbose=False):
+    config = config["report"]
     console = Console()
     tasks = subprocess.run(
         ["task", "scheduling~.", "export"], capture_output=True, text=True
@@ -76,7 +81,7 @@ def generate_report(config, constraint, verbose=False):
     tasks = json.loads(tasks.stdout)
 
     for year, month, day in get_days_in_constraint(constraint):
-        this_day_tasks = get_tasks(tasks, year, month, day)
+        this_day_tasks = get_tasks(config, tasks, year, month, day)
 
         # Create a colorful date header with emojis and a panel
         date_str = f":calendar: [bold cyan]{year}-{month}-{day}[/bold cyan]"
@@ -90,6 +95,8 @@ def generate_report(config, constraint, verbose=False):
             table.add_column("Time", justify="right")
             table.add_column("Urgency")
             table.add_column("Due date")
+            for attr in config.get("additional_attributes", []):
+                table.add_column(attr)
 
             for task in this_day_tasks:
                 task_id = f"[bold green]#{task['id']}[/bold green]"
@@ -104,17 +111,24 @@ def generate_report(config, constraint, verbose=False):
                     due = f"[green]{due.days}d[/green]"
 
                 # Add an emoji based on a keyword in the description
-                if "meeting" in task["description"].lower():
-                    emoji = ":busts_in_silhouette:"
-                elif "review" in task["description"].lower():
-                    emoji = ":mag_right:"
-                elif "write" in task["description"].lower():
-                    emoji = ":pencil:"
+                for keyword in config.get("emoji_keywords", []):
+                    if keyword in task["description"].lower():
+                        emoji = config["emoji_keywords"][keyword]
+                        break
                 else:
                     emoji = ":pushpin:"
 
                 table.add_row(
-                    f"{emoji} {task_id}", project, description, hours, urgency, due
+                    f"{emoji} {task_id}",
+                    project,
+                    description,
+                    hours,
+                    urgency,
+                    due,
+                    *[
+                        task.get(attr, "")
+                        for attr in config.get("additional_attributes", [])
+                    ],
                 )
 
             console.print(table)
