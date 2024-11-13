@@ -2,7 +2,6 @@
 > _A non-AI automatic scheduler for taskwarrior (i.e. alternative to skedpal/timehero/flowsavvy/reclaim/trevor/motion)_
 
 This is a taskwarrior extension checks if tasks can be completed on time, considering estimated time and working hours.
-b9082701-339b-4407-b941-b613a717382c
 
 <p align="center">
 <img src="https://github.com/user-attachments/assets/b9082701-339b-4407-b941-b613a717382c"/>
