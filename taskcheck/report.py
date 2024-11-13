@@ -115,7 +115,9 @@ def generate_report(config, constraint, verbose=False):
 def fetch_tasks():
     """Fetch tasks from the task manager and return them as a JSON object."""
     tasks = subprocess.run(
-        ["task", "scheduling~.", "export"], capture_output=True, text=True
+        ["task", "scheduling~.", "(", "+PENDING", "or", "+WAITING", ")", "export"],
+        capture_output=True,
+        text=True,
     )
     return json.loads(tasks.stdout)
 
