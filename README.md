@@ -21,6 +21,8 @@ This is a taskwarrior extension checks if tasks can be completed on time, consid
 This extension parses your pending and waiting tasks sorted decreasingly by urgency and tries to schedule them in the future.
 It considers their estimated time to schedule all tasks starting from the most urgent one.
 
+#### UDAs
+
 Taskcheck leverages to UDAs, `estimated` and `time_map`. The `estimated` attribute is
 the expected time to complete the task in hours. The `time_map` is a comma-separated list of strings
 that indicates the hours per day in which you will work on a task (e.g. `work`, `weekend`, etc.).
@@ -36,6 +38,8 @@ tuesday = [[9, 12.30], [14, 17]]
 # ...
 ```
 
+#### They say it's an "AI"
+
 Taskcheck will also parse online iCal calendars (Google, Apple, etc.) and will match them with your time maps.
 It will then modify the Taskwarrior tasks by adding the `completion_date` attribute with the expected
 date of completion and the `scheduled` attribute with the date in which the task is expected to
@@ -45,6 +49,15 @@ It will also print a red line for every task whose `completion_date` is after it
 
 In general, it is recommended to run taskcheck rather frequently and at least once at the beginning
 of your working day.
+
+#### Reports
+
+You can also print simple reports that exploit the `scheduling` UDA filled by Taskcheck to grasp
+how much time you have to work on which task in which day. For
+instance:
+
+- `taskcheck -r today` will show the tasks planned for today
+- `taskcheck -r 1w` will show the tasks planned for the next week,
 
 ## Algorithms
 
@@ -122,12 +135,11 @@ expiration = 720 # in hours (720 hours = 30 days)
 
 - You can exclude a task from being scheduled by removing the `time_map` or `estimated` attributes.
 - You can see tasks that you can execute now with the `task ready` report.
-- You can see the schedule for a task in the `scheduling` UDA, e.g. `task scheduling:$(task calc
-tomorrow)` will show you the tasks that include a scheduling for tomorrow.
 
 ## CLI Options
 
 ```
 -v, --verbose: increase output verbosity
 -i, --install: install taskcheck configuration
+-r, --report: show tasks planned until a certain time
 ```

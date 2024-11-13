@@ -7,13 +7,19 @@ from taskcheck.common import config_dir
 
 arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument(
-    "-v", "--verbose", action="store_true", help="increase output verbosity"
+    "-v", "--verbose", action="store_true", help="increase output verbosity."
 )
 arg_parser.add_argument(
     "-i",
     "--install",
     action="store_true",
-    help="install the UDAs, required settings, and default config file",
+    help="install the UDAs, required settings, and default config file.",
+)
+arg_parser.add_argument(
+    "-r",
+    "--report",
+    action="store",
+    help="generate a report of the tasks based on the scheduling; can be any Taskwarrior datetime specification (e.g. today, tomorrow, eom, som, 1st, 2nd, etc.). It is considered as `by`, meaning that the report will be generated for all the days until the specified date and including it.",
 )
 
 args = arg_parser.parse_args()
@@ -32,6 +38,13 @@ def main():
         from taskcheck.install import install
 
         install()
+        return
+
+    if args.report:
+        from taskcheck.report import generate_report
+
+        config = load_config()
+        generate_report(config, args.report, args.verbose)
         return
 
     config = load_config()
