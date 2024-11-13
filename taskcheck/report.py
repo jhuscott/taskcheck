@@ -85,55 +85,126 @@ def tostring(value):
         return str(value)
 
 
+def get_unplanned_tasks(config, tasks):
+    tasks = subprocess.run(
+        ["task", "scheduling:", "status:pending", "export"],
+        capture_output=True,
+        text=True,
+    )
+    tasks = json.loads(tasks.stdout)
+    return tasks
+
+
 def generate_report(config, constraint, verbose=False):
     config = config["report"]
     console = Console()
-    tasks = subprocess.run(
-        ["task", "scheduling~.", "export"], capture_output=True, text=True
-    )
-    tasks = json.loads(tasks.stdout)
+    tasks = fetch_tasks()
 
     for year, month, day in get_days_in_constraint(constraint):
         this_day_tasks = get_tasks(config, tasks, year, month, day)
 
-        # Create a colorful date header with emojis and a panel
-        date_str = f":calendar: [bold cyan]{year}-{month}-{day}[/bold cyan]"
-        console.print(Panel(date_str, style="bold magenta", expand=False))
+        display_date_header(console, year, month, day)
 
-        if this_day_tasks:
-            table = Table(show_header=True, header_style="bold blue")
-            table.add_column("Task", style="dim", width=12)
-            table.add_column("Project", style="dim", width=12)
-            table.add_column("Description")
-            table.add_column("Time", justify="right")
-            for attr in config.get("additional_attributes", []):
-                table.add_column(attr.capitalize(), justify="right")
+        display_tasks_table(console, config, this_day_tasks)
 
-            for task in this_day_tasks:
-                task_id = f"[bold green]#{task['id']}[/bold green]"
-                project = task["project"]
-                description = Text(task["description"], style="white")
-                hours = f"[yellow]{task['scheduling_hours']}[/yellow]"
+    if config.get("include_unplanned"):
+        unplanned_tasks = get_unplanned_tasks(config, tasks)
+        display_unplanned_tasks(console, config, unplanned_tasks)
 
-                # Add an emoji based on a keyword in the description
-                for keyword in config.get("emoji_keywords", []):
-                    if keyword in task["description"].lower():
-                        emoji = config["emoji_keywords"][keyword]
-                        break
-                else:
-                    emoji = ":pushpin:"
 
-                table.add_row(
-                    f"{emoji} {task_id}",
-                    project,
-                    description,
-                    hours,
-                    *[
-                        tostring(task.get(attr, ""))
-                        for attr in config.get("additional_attributes", [])
-                    ],
-                )
+def fetch_tasks():
+    """Fetch tasks from the task manager and return them as a JSON object."""
+    tasks = subprocess.run(
+        ["task", "scheduling~.", "export"], capture_output=True, text=True
+    )
+    return json.loads(tasks.stdout)
 
-            console.print(table)
-        else:
-            console.print("[italic dim]No tasks scheduled for this day.[/italic dim]")
+
+def display_date_header(console, year, month, day):
+    """Display a date header with a calendar emoji."""
+    date_str = f":calendar: [bold cyan]{year}-{month}-{day}[/bold cyan]"
+    console.print(Panel(date_str, style="bold blue", expand=False))
+
+
+def display_tasks_table(console, config, tasks):
+    """Display a table of tasks for a specific day."""
+    if tasks:
+        table = build_tasks_table(config, tasks)
+        console.print(table)
+    else:
+        console.print("[italic dim]No tasks scheduled for this day.[/italic dim]")
+
+
+def build_tasks_table(config, tasks):
+    """Build a Rich table for displaying tasks."""
+    table = Table(show_header=True, header_style="bold blue")
+    table.add_column("Task", style="dim", width=12)
+    table.add_column("Project", style="dim", width=12)
+    table.add_column("Description")
+    table.add_column("Time", justify="right")
+    for attr in config.get("additional_attributes", []):
+        table.add_column(attr.capitalize(), justify="right")
+
+    for task in tasks:
+        task_id = f"[bold green]#{task['id']}[/bold green]"
+        project = task.get("project", "")
+        description = Text(task["description"], style="white")
+        hours = f"[yellow]{task['scheduling_hours']}[/yellow]"
+        emoji = get_task_emoji(config, task)
+
+        table.add_row(
+            f"{emoji} {task_id}",
+            project,
+            description,
+            hours,
+            *[
+                tostring(task.get(attr, ""))
+                for attr in config.get("additional_attributes", [])
+            ],
+        )
+    return table
+
+
+def get_task_emoji(config, task):
+    """Get an emoji based on keywords in the task description."""
+    for keyword in config.get("emoji_keywords", []):
+        if keyword in task["description"].lower():
+            return config["emoji_keywords"][keyword]
+    return ":pushpin:"
+
+
+def display_unplanned_tasks(console, config, tasks):
+    """Display unplanned tasks if any are found."""
+    if tasks:
+        table = build_unplanned_tasks_table(config, tasks)
+        console.print(Panel("Unplanned Tasks", style="bold blue", expand=False))
+        console.print(table)
+    else:
+        console.print(
+            Panel(
+                "[italic dim]No unplanned tasks found.[/italic dim]",
+                style="bold blue",
+                expand=False,
+            )
+        )
+
+
+def build_unplanned_tasks_table(config, tasks):
+    """Build a Rich table for displaying unplanned tasks."""
+    table = Table(show_header=True, header_style="bold blue")
+    table.add_column("Task", style="dim", width=12)
+    table.add_column("Project", style="dim", width=12)
+    table.add_column("Description")
+
+    for task in tasks:
+        task_id = f"[bold green]#{task['id']}[/bold green]"
+        project = task.get("project", "")
+        description = Text(task["description"], style="white")
+        emoji = get_task_emoji(config, task)
+
+        table.add_row(
+            f"{emoji} {task_id}",
+            project,
+            description,
+        )
+    return table
