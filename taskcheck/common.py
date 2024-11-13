@@ -158,6 +158,8 @@ def get_long_range_time_map(
         time_map = time_maps[time_map_name].get(today_weekday)
         if time_map:
             for schedule_start, schedule_end in time_map:
+                schedule_start = hours_to_decimal(schedule_start)
+                schedule_end = hours_to_decimal(schedule_end)
                 if schedule_start <= today_time <= schedule_end:
                     today_used_hours += today_time - schedule_start
                     break
