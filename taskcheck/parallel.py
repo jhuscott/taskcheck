@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from taskcheck.common import (
     AVOID_STATUS,
+    console,
     get_calendars,
     get_long_range_time_map,
     get_tasks,
@@ -285,6 +286,13 @@ def update_tasks_with_scheduling_info(task_info, verbose):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+        due = task.get("due")
+        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        if due is not None and end_date > datetime.strptime(due, "%Y%m%dT%H%M%SZ"):
+            console.print(
+                f"[red]Warning: Task {task['id']} ('{task['description']}') is not going to be completed on time.[/red]"
+            )
+
         if verbose:
             print(
                 f"Updated task {task['id']} with scheduled dates {start_date} to {end_date}"

@@ -3,8 +3,11 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 import appdirs
+from rich.console import Console
 
 from taskcheck.ical import ical_to_dict
+
+console = Console()
 
 config_dir = Path(appdirs.user_config_dir("task"))
 
