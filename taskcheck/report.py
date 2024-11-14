@@ -1,3 +1,4 @@
+import random
 import sys
 from datetime import timedelta
 from datetime import datetime
@@ -11,6 +12,170 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 from rich.panel import Panel
+
+from random_unicode_emoji import random_emoji
+
+
+DEFAULT_EMOJI_KEYWORDS = {
+    "meet": ":busts_in_silhouette:",
+    "incontr": ":busts_in_silhouette:",
+    "rencontr": ":busts_in_silhouette:",
+    "reun": ":busts_in_silhouette:",
+    "treff": ":busts_in_silhouette:",
+    "review": ":mag_right:",
+    "revis": ":mag_right:",
+    "révis": ":mag_right:",
+    "überprüf": ":mag_right:",
+    "write": ":pencil2:",
+    "scriv": ":pencil2:",
+    "écri": ":pencil2:",
+    "escrib": ":pencil2:",
+    "schreib": ":pencil2:",
+    "read": ":books:",
+    "legg": ":books:",
+    "lis": ":books:",
+    "le": ":books:",
+    "les": ":books:",
+    "posta": ":email:",
+    "courri": ":email:",
+    "corre": ":email:",
+    "mail": ":email:",
+    "call": ":telephone_receiver:",
+    "chiam": ":telephone_receiver:",
+    "appel": ":telephone_receiver:",
+    "llam": ":telephone_receiver:",
+    "ruf": ":telephone_receiver:",
+    "présent": ":chart_with_upwards_trend:",
+    "present": ":chart_with_upwards_trend:",
+    "präsent": ":chart_with_upwards_trend:",
+    "learn": ":mortar_board:",
+    "impar": ":mortar_board:",
+    "appren": ":mortar_board:",
+    "aprend": ":mortar_board:",
+    "lern": ":mortar_board:",
+    "search": ":mag:",
+    "cerc": ":mag:",
+    "cherch": ":mag:",
+    "busc": ":mag:",
+    "such": ":mag:",
+    "idea": ":bulb:",
+    "idé": ":bulb:",
+    "ide": ":bulb:",
+    "break": ":coffee:",
+    "paus": ":coffee:",
+    "descans": ":coffee:",
+    "lunch": ":fork_and_knife:",
+    "pranz": ":fork_and_knife:",
+    "déjeun": ":fork_and_knife:",
+    "almorz": ":fork_and_knife:",
+    "mittag": ":fork_and_knife:",
+    "test": ":test_tube:",
+    "develop": ":hammer_and_wrench:",
+    "svilupp": ":hammer_and_wrench:",
+    "développ": ":hammer_and_wrench:",
+    "desarroll": ":hammer_and_wrench:",
+    "entwickl": ":hammer_and_wrench:",
+    "disegn": ":art:",
+    "diseñ": ":art:",
+    "design": ":art:",
+    "dafar": ":memo:",
+    "tarea": ":memo:",
+    "todo": ":memo:",
+    "bug": ":beetle:",
+    "käfer": ":beetle:",
+    "fix": ":wrench:",
+    "corregg": ":wrench:",
+    "répar": ":wrench:",
+    "beheb": ":wrench:",
+    "urgent": ":exclamation:",
+    "dringend": ":exclamation:",
+    "deadlin": ":hourglass_flowing_sand:",
+    "scadenz": ":hourglass_flowing_sand:",
+    "délais": ":hourglass_flowing_sand:",
+    "fechalim": ":hourglass_flowing_sand:",
+    "frist": ":hourglass_flowing_sand:",
+    "updat": ":arrows_counterclockwise:",
+    "aggiorn": ":arrows_counterclockwise:",
+    "mett": ":arrows_counterclockwise:",
+    "actualiz": ":arrows_counterclockwise:",
+    "aktualisier": ":arrows_counterclockwise:",
+    "clean": ":broom:",
+    "pul": ":broom:",
+    "nettoy": ":broom:",
+    "limpi": ":broom:",
+    "reinig": ":broom:",
+    "deploy": ":rocket:",
+    "rilasc": ":rocket:",
+    "déploy": ":rocket:",
+    "despleg": ":rocket:",
+    "bereitstell": ":rocket:",
+    "festegg": ":tada:",
+    "célébr": ":tada:",
+    "celebr": ":tada:",
+    "feier": ":tada:",
+    "research": ":microscope:",
+    "ricerc": ":microscope:",
+    "recherch": ":microscope:",
+    "investig": ":microscope:",
+    "forsch": ":microscope:",
+    "shop": ":shopping_cart:",
+    "achet": ":shopping_cart:",
+    "compr": ":shopping_cart:",
+    "einkauf": ":shopping_cart:",
+    "social": ":handshake:",
+    "sozial": ":handshake:",
+    "exercis": ":running_shoe:",
+    "eserciz": ":running_shoe:",
+    "exercic": ":running_shoe:",
+    "ejerc": ":running_shoe:",
+    "übun": ":running_shoe:",
+    "évènement": ":calendar:",
+    "event": ":calendar:",
+    "movie": ":clapper:",
+    "pelicul": ":clapper:",
+    "film": ":clapper:",
+    "music": ":musical_note:",
+    "musik": ":musical_note:",
+    "travel": ":airplane:",
+    "viagg": ":airplane:",
+    "voyag": ":airplane:",
+    "viaj": ":airplane:",
+    "reis": ":airplane:",
+    "home": ":house:",
+    "mais": ":house:",
+    "cas": ":house:",
+    "haus": ":house:",
+    "docu": ":notebook:",
+    "dokum": ":notebook:",
+    "backup": ":floppy_disk:",
+    "salvat": ":floppy_disk:",
+    "sauveg": ":floppy_disk:",
+    "copiaseg": ":floppy_disk:",
+    "sicher": ":floppy_disk:",
+    "debug": ":bug:",
+    "débug": ":bug:",
+    "note": ":spiral_notepad:",
+    "not": ":spiral_notepad:",
+    "focus": ":dart:",
+    "concentr": ":dart:",
+    "konzentrier": ":dart:",
+    "codic": ":computer:",
+    "cod": ":computer:",
+    "code": ":computer:",
+    "serveur": ":cloud:",
+    "servidor": ":cloud:",
+    "server": ":cloud:",
+    "client": ":briefcase:",
+    "priorid": ":bangbang:",
+    "priorit": ":bangbang:",
+    "star": ":star:",
+    "stell": ":star:",
+    "étoil": ":star:",
+    "estrell": ":star:",
+    "stern": ":star:",
+    "critic": ":fire:",
+    "kritisch": ":fire:",
+}
 
 
 def get_tasks(config, tasks, year, month, day):
@@ -172,7 +337,21 @@ def get_task_emoji(config, task):
     for keyword in config.get("emoji_keywords", []):
         if keyword in task["description"].lower():
             return config["emoji_keywords"][keyword]
-    return ":pushpin:"
+    for keyword, emoji in DEFAULT_EMOJI_KEYWORDS.items():
+        if keyword in task["description"].lower():
+            return emoji
+    # sum the unicode numbers of each letter in the description and use it as seed to get a random unicode
+    # emoji
+    seed = sum(ord(char) for char in task["description"])
+    emoji = ""
+    # seed the next call to random.choice
+    random.seed(seed)
+    emoji = random_emoji()[0]
+    # some emoji coutn for more than one character and misbehave the tables of rich
+    if len(emoji) > 1:
+        while len(emoji) != 1:
+            emoji = random_emoji()[0]
+    return emoji
 
 
 def display_unplanned_tasks(console, config, tasks):
@@ -197,6 +376,8 @@ def build_unplanned_tasks_table(config, tasks):
     table.add_column("Task", style="dim", width=12)
     table.add_column("Project", style="dim", width=12)
     table.add_column("Description")
+    for attr in config.get("additional_attributes_unplanned", []):
+        table.add_column(attr.capitalize(), justify="right")
 
     for task in tasks:
         task_id = f"[bold green]#{task['id']}[/bold green]"
@@ -208,5 +389,9 @@ def build_unplanned_tasks_table(config, tasks):
             f"{emoji} {task_id}",
             project,
             description,
+            *[
+                tostring(task.get(attr, ""))
+                for attr in config.get("additional_attributes_unplanned", [])
+            ],
         )
     return table
