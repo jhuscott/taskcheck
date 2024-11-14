@@ -1,4 +1,4 @@
-version=sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml
+set version (sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
 git commit -am "new v$version"
 git tag -a v$version -m "v$version"
 git push origin v$version
