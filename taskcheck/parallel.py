@@ -223,6 +223,14 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients):
             info["started"] = False
 
     if urgency_coefficients.inherit:
+        # Build reverse dependencies mapping
+        reverse_deps = {}  # Map from task_uuid to list of tasks that depend on it
+        for task_uuid, info in tasks_remaining.items():
+            for dep_uuid in info["task"].get("depends", []):
+                if dep_uuid not in reverse_deps:
+                    reverse_deps[dep_uuid] = []
+                reverse_deps[dep_uuid].append(task_uuid)
+
         # Define a recursive function to compute the maximum urgency
         def get_max_urgency(info, visited):
             task_uuid = info["task"]["uuid"]
@@ -231,8 +239,8 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients):
             # Start with the current task's urgency
             urgency = info["urgency"]
             visited[task_uuid] = urgency  # Mark as visited
-            # Recursively compute urgencies of dependents
-            for dep_uuid in info["task"].get("depends", []):
+            # Recursively compute urgencies of tasks that depend on this task
+            for dep_uuid in reverse_deps.get(task_uuid, []):
                 if dep_uuid in tasks_remaining:
                     dep_info = tasks_remaining[dep_uuid]
                     dep_urgency = get_max_urgency(dep_info, visited)
@@ -240,7 +248,7 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients):
             visited[task_uuid] = urgency  # Update with the maximum urgency found
             return urgency
 
-        # Update urgencies based on dependents
+        # Update urgencies based on tasks that depend on them
         for info in tasks_remaining.values():
             visited = {}  # Reset visited dictionary for each task
             max_urgency = get_max_urgency(info, visited)
