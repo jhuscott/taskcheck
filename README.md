@@ -63,29 +63,9 @@ instance:
 - `taskcheck -r today` will show the tasks planned for today
 - `taskcheck -r 1w` will show the tasks planned for the next week,
 
-## Algorithms
+## Algorithm
 
-Taskcheck provides two scheduling algorithms: `parallel` and `sequential`.
-
-#### Sequential
-
-The `sequential` algorithm schedules tasks one after the other. It is the simplest algorithm.
-It looks at your tasks one by one, computes the time slots available for that task, and fills them
-as soon as possible.
-
-While it sounds logical, it has a problem.
-While you're working on a task, its remaining estimated time is decreasing, and if your urgency
-depends on the estimated time left, the urgency of the task will decrease as well.
-This is especially problematic for long tasks: imagine if you block your whole week for a single
-task and all the other small tasks, even if urgent, don't get scheduled. After a few days, the
-urgency of the first long task should have decreased.
-
-#### Parallel
-
-The `parallel` algorithm tries to solve the problem of the `sequential` algorithm.
-
-Instead of allocating all the available time for a task until the task is finished, the `parallel`
-algorithm allocates a fixed amount of time for each task (e.g. 1 hour) and then recomputes the
+The algorithm allocates a fixed amount of time for each task (e.g. 1 hour) and then recomputes the
 urgency and restart the allocation procedure.
 
 If after 1 hour the long task has decreased urgency, that will be noticed and the newer most urgent
@@ -93,8 +73,6 @@ task will get scheduled in its place.
 
 The minimum time for a task is by default 2 hours, but you can change it by tuning the `min_block`
 taskwarrior UDA.
-
-The `parallel` algorithm is the default algorithm.
 
 ## Configuration
 
@@ -119,7 +97,6 @@ saturday = [[9, 12.30], ]
 sunday = [[9, 12.30], ]
 
 [scheduler]
-algorithm = "parallel" # or "sequential", see above
 days_ahead = 1000 # how far go with the schedule (lower values make the computation faster)
 
 [calendars]
@@ -133,6 +110,13 @@ timezone = "Europe/Rome" # if set, force timezone for this calendar; timezone va
 url = "https://www.officeholidays.com/ics-clean/italy/milan"
 event_all_day_is_blocking = true
 expiration = 720 # in hours (720 hours = 30 days)
+
+[report]
+additional_attributes = ["estimated", "due", "urgency"] # additional attributes to show in the report
+# when these words are matched in the task description, the corresponding emoji is used
+emoji_keywords = {"meet"=":busts_in_silhouette:", "review"=":mag_right:"}
+include_unplanned = true # include unplanned tasks in the report in an ad-hoc section
+additional_attributes_unplanned = ["due", "urgency"] # additional attributes to show in the report for unplanned tasks
 ```
 
 ## Tips and Tricks

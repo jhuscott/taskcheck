@@ -12,7 +12,6 @@ thursday = [[9, 12.30], [14, 17]]
 friday = [[9, 12.30], [14, 17]]
 
 [scheduler]
-algorithm = "parallel"
 days_ahead = 365
 """
 

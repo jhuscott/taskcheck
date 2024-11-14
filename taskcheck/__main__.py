@@ -48,13 +48,7 @@ def main():
         return
 
     config = load_config()
-    algo = config["scheduler"].get("algorithm", "parallel")
-    if algo == "parallel":
-        check_tasks_parallel(config, verbose=args.verbose)
-    elif algo == "sequential":
-        check_tasks_sequentially(config, verbose=args.verbose)
-    else:
-        raise ValueError(f"Unknown algorithm: {algo}")
+    check_tasks_parallel(config, verbose=args.verbose)
 
 
 if __name__ == "__main__":
