@@ -64,9 +64,7 @@ def compute_estimated_urgency(remaining_hours, urgency_coefficients):
         key=lambda x: abs(pdth_to_hours(x) - remaining_hours),
     )
     coefficient = urgency_coefficients.estimated[closest_match]
-    # Compute the urgency
-    estimated_urgency = coefficient * remaining_hours
-    return estimated_urgency
+    return coefficient
 
 
 def check_tasks_parallel(config, verbose=False):
