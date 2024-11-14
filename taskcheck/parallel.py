@@ -134,7 +134,7 @@ def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, ver
         recompute_urgencies(tasks_remaining, urgency_coefficients)
         sorted_task_ids = sorted(
             tasks_remaining.keys(),
-            key=lambda x: (tasks_remaining[x]["urgency"], x),
+            key=lambda x: tasks_remaining[x]["urgency"],
             reverse=True,
         )
 
