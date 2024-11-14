@@ -220,6 +220,7 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients):
         if started_by_scheduler and not started_by_user:
             # If the task was started by the scheduler, apply the active task coefficient
             info["urgency"] += urgency_coefficients.active
+            info["started"] = False
 
     if urgency_coefficients.inherit:
         # Define a recursive function to compute the maximum urgency
@@ -261,9 +262,10 @@ def allocate_time_to_task(info, day_offset, day_remaining_hours):
     if allocation <= 0.05:
         return 0
 
+    if info["remaining_hours"] == info["task"]["estimated"]:
+        info["started"] = True
     info["remaining_hours"] -= allocation
     info["task_time_map"][day_offset] -= allocation
-    info["started"] = True
 
     return allocation
 
