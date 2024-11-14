@@ -122,8 +122,8 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
 
 def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, verbose):
     total_available_hours = compute_total_available_hours(task_info, day_offset)
-    if verbose:
-        print(f"Day {date}, total available hours: {total_available_hours:.2f}")
+    # if verbose:
+    #     print(f"Day {date}, total available hours: {total_available_hours:.2f}")
     if total_available_hours <= 0:
         return
 
@@ -146,6 +146,17 @@ def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, ver
             info = tasks_remaining[uuid]
             if any(d in tasks_remaining for d in info["task"].get("depends", [])):
                 # cannot execute this task until all its dependencies are completed
+                if verbose:
+                    print(
+                        "Skipping task",
+                        info["task"]["id"],
+                        "due to dependency on:",
+                        [
+                            tasks_remaining[_d]["task"]["id"]
+                            for _d in info["task"].get("depends", [])
+                            if _d in tasks_remaining
+                        ],
+                    )
                 continue
             allocation = allocate_time_to_task(info, day_offset, day_remaining_hours)
             if allocation > 0:
@@ -155,7 +166,7 @@ def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, ver
                 update_task_scheduling(info, allocation, date_str)
                 if verbose:
                     print(
-                        f"Allocated {allocation:.2f} hours to task {info['task']['id']} on {date}"
+                        f"Allocated {allocation:.2f} hours to task {info['task']['id']} on {date} with urgency {info['urgency']:.2f} and estimated-related urgency {info['estimated_urgency']:.2f}"
                     )
                 if (
                     info["remaining_hours"] <= 0
@@ -166,8 +177,8 @@ def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, ver
                 break
         if not allocated:
             break
-    if verbose and day_remaining_hours > 0:
-        print(f"Unused time on {date}: {day_remaining_hours:.2f} hours")
+    # if verbose and day_remaining_hours > 0:
+    #     print(f"Unused time on {date}: {day_remaining_hours:.2f} hours")
 
 
 def compute_total_available_hours(task_info, day_offset):
