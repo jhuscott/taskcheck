@@ -80,10 +80,7 @@ def check_tasks_parallel(config, verbose=False):
     )
 
     for day_offset in range(days_ahead):
-        date = today + timedelta(days=day_offset)
-        allocate_time_for_day(
-            task_info, day_offset, date, urgency_coefficients, verbose
-        )
+        allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose)
 
     update_tasks_with_scheduling_info(task_info, verbose)
 
@@ -118,7 +115,8 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
     return task_info
 
 
-def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, verbose):
+def allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose):
+    date = datetime.today().date() + timedelta(days=day_offset)
     total_available_hours = compute_total_available_hours(task_info, day_offset)
     # if verbose:
     #     print(f"Day {date}, total available hours: {total_available_hours:.2f}")
@@ -155,6 +153,12 @@ def allocate_time_for_day(task_info, day_offset, date, urgency_coefficients, ver
                             if _d in tasks_remaining
                         ],
                     )
+                continue
+
+            wait = info["task"].get("wait")
+            if wait and date <= datetime.strptime(wait, "%Y%m%dT%H%M%SZ").date():
+                if verbose:
+                    print(f"Skipping task {info['task']['id']} due to wait date {wait}")
                 continue
             allocation = allocate_time_to_task(info, day_offset, day_remaining_hours)
             if allocation > 0:

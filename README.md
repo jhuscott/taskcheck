@@ -131,3 +131,7 @@ additional_attributes_unplanned = ["due", "urgency"] # additional attributes to 
 -i, --install: install taskcheck configuration
 -r, --report: show tasks planned until a certain time
 ```
+
+## TODO
+
+- [ ] Consider due dates are nearer while planning in the future
