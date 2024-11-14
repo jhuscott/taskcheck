@@ -2,7 +2,6 @@ import tomllib
 import argparse
 
 from taskcheck.parallel import check_tasks_parallel
-from taskcheck.sequential import check_tasks_sequentially
 from taskcheck.common import config_dir
 
 arg_parser = argparse.ArgumentParser()
