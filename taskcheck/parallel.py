@@ -20,6 +20,9 @@ class UrgencyCoefficients:
     estimated: dict
     inherit: bool
     active: float
+    age_max: int
+    urgency_due: int
+    urgency_age: int
 
 
 def get_urgency_coefficients():
@@ -31,16 +34,22 @@ def get_urgency_coefficients():
     result = subprocess.run(["task", "_show"], capture_output=True, text=True)
     inherit_urgency = False
     active_task_coefficient = 0
-    coefficients = {}
+    est_coeffs = {}
+    urgency_age_max = 0
+    urgency_age = 0
+    urgency_due = 0
     pattern1 = re.compile(r"^urgency\.uda\.estimated\.(.+)\.coefficient=(.+)$")
     pattern2 = re.compile(r"^urgency\.inherit=(.+)$")
-    pattern3 = re.compile(r"^urgency\.active.coefficient=(.+)$")
+    pattern3 = re.compile(r"^urgency\.active\.coefficient=(.+)$")
+    pattern4 = re.compile(r"^urgency\.age\.max=(.+)$")
+    pattern5 = re.compile(r"^urgency\.due\.coefficient=(.+)$")
+    pattern6 = re.compile(r"^urgency\.age\.coefficient=(.+)$")
     for line in result.stdout.splitlines():
         match = pattern1.match(line)
         if match:
             estimated_value = match.group(1)
             coefficient = float(match.group(2))
-            coefficients[estimated_value] = coefficient
+            est_coeffs[estimated_value] = coefficient
 
         match = pattern2.match(line)
         if match:
@@ -51,20 +60,26 @@ def get_urgency_coefficients():
             active_coefficient = float(match.group(1))
             active_task_coefficient = active_coefficient
 
-    return UrgencyCoefficients(coefficients, inherit_urgency, active_task_coefficient)
+        match = pattern4.match(line)
+        if match:
+            urgency_age_max = int(match.group(1))
 
+        match = pattern5.match(line)
+        if match:
+            urgency_due = int(match.group(1))
 
-def compute_estimated_urgency(remaining_hours, urgency_coefficients):
-    """
-    Computes the estimated urgency for the given remaining hours using the coefficients.
-    """
-    # Find the closest match (e.g., if '2h' is not available, use '1h' or '3h')
-    closest_match = min(
-        urgency_coefficients.estimated.keys(),
-        key=lambda x: abs(pdth_to_hours(x) - remaining_hours),
+        match = pattern6.match(line)
+        if match:
+            urgency_age = int(match.group(1))
+
+    return UrgencyCoefficients(
+        est_coeffs,
+        inherit_urgency,
+        active_task_coefficient,
+        urgency_age_max,
+        urgency_due,
+        urgency_age,
     )
-    coefficient = urgency_coefficients.estimated[closest_match]
-    return coefficient
 
 
 def check_tasks_parallel(config, verbose=False):
@@ -72,7 +87,6 @@ def check_tasks_parallel(config, verbose=False):
     time_maps = config["time_maps"]
     days_ahead = config["scheduler"]["days_ahead"]
     calendars = get_calendars(config)
-    today = datetime.today().date()
     urgency_coefficients = get_urgency_coefficients()
 
     task_info = initialize_task_info(
@@ -87,6 +101,7 @@ def check_tasks_parallel(config, verbose=False):
 
 def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, calendars):
     task_info = {}
+    today = datetime.today().date()
     for task in tasks:
         if task.get("status") in AVOID_STATUS:
             continue
@@ -99,9 +114,11 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
         )
         task_uuid = task["uuid"]
         initial_urgency = float(task.get("urgency", 0))
-        estimated_urgency = compute_estimated_urgency(
-            estimated_hours, urgency_coefficients
+        estimated_urgency = urgency_estimated(
+            {"remaining_hours": estimated_hours}, None, urgency_coefficients
         )
+        due_urgency = urgency_due({"task": task}, today, urgency_coefficients)
+        age_urgency = urgency_age({"task": task}, today, urgency_coefficients)
         task_info[task_uuid] = {
             "task": task,
             "remaining_hours": estimated_hours,
@@ -110,6 +127,8 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
             "scheduling": {},
             "urgency": initial_urgency,
             "estimated_urgency": estimated_urgency,
+            "due_urgency": due_urgency,
+            "age_urgency": age_urgency,
             "started": False,
         }
     return task_info
@@ -127,7 +146,7 @@ def allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose):
     tasks_remaining = prepare_tasks_remaining(task_info, day_offset)
 
     while day_remaining_hours > 0 and tasks_remaining:
-        recompute_urgencies(tasks_remaining, urgency_coefficients)
+        recompute_urgencies(tasks_remaining, urgency_coefficients, date)
         sorted_task_ids = sorted(
             tasks_remaining.keys(),
             key=lambda x: tasks_remaining[x]["urgency"],
@@ -205,16 +224,72 @@ def prepare_tasks_remaining(task_info, day_offset):
     }
 
 
-def recompute_urgencies(tasks_remaining, urgency_coefficients):
+def urgency_due(info, date, urgency_coefficients):
+    lfs = 0
+    task = info["task"]
+    if "due" in task:
+        due = datetime.strptime(task["due"], "%Y%m%dT%H%M%SZ").date()
+        # Map a range of 21 days to the value 0.2 - 1.0
+        days_overdue = (date - due).days
+        if days_overdue >= 7.0:
+            lfs = 1.0  # < 1 wk ago
+        elif days_overdue >= -14.0:
+            lfs = ((days_overdue + 14.0) * 0.8 / 21.0) + 0.2
+        else:
+            lfs = 0.2  # 2 wks
+    return lfs * urgency_coefficients.urgency_due
+
+
+def urgency_age(info, date, urgency_coefficients):
+    urgency_age_max = urgency_coefficients.age_max
+    lfs = 1.0
+    task = info["task"]
+    if "entry" not in task:
+        return 1.0
+    entry = datetime.strptime(task["entry"], "%Y%m%dT%H%M%SZ").date()
+    age = (date - entry).days  # in days
+    if urgency_age_max == 0 or age >= urgency_age_max:
+        lfs = 1.0
+    return lfs * age / urgency_age_max * urgency_coefficients.urgency_age
+
+
+def urgency_estimated(info, date, urgency_coefficients):
+    """
+    Computes the estimated urgency for the given remaining hours using the coefficients.
+    """
+    # Find the closest match (e.g., if '2h' is not available, use '1h' or '3h')
+    closest_match = min(
+        urgency_coefficients.estimated.keys(),
+        key=lambda x: abs(pdth_to_hours(x) - info["remaining_hours"]),
+    )
+    coefficient = urgency_coefficients.estimated[closest_match]
+    return coefficient
+
+
+def update_urgency(info, urgency_key, urgency_compute_fn, urgency_coefficients, date):
+    urgency_value = urgency_compute_fn(info, date, urgency_coefficients)
+    old_urgency = info[urgency_key]
+    if old_urgency != urgency_value:
+        print(
+            f"new urgency value for task {info['task']['id']}: {urgency_key}: {urgency_value}"
+        )
+    info[urgency_key] = urgency_value
+    info["urgency"] = info["urgency"] - old_urgency + urgency_value
+
+
+def recompute_urgencies(tasks_remaining, urgency_coefficients, date):
+    """Recompute urgency simulating that today is `date`"""
     # Recompute estimated urgencies as before
     for info in tasks_remaining.values():
-        remaining_hours = info["remaining_hours"]
-        estimated_urgency = compute_estimated_urgency(
-            remaining_hours, urgency_coefficients
+        # Update estimated urgency
+        update_urgency(
+            info, "estimated_urgency", urgency_estimated, urgency_coefficients, date
         )
-        _old_estimated_urgency = info["estimated_urgency"]
-        info["estimated_urgency"] = estimated_urgency
-        info["urgency"] = info["urgency"] - _old_estimated_urgency + estimated_urgency
+        # Update due partial urgency
+        update_urgency(info, "due_urgency", urgency_due, urgency_coefficients, date)
+        # Update age partial urgency
+        update_urgency(info, "age_urgency", urgency_age, urgency_coefficients, date)
+
         started_by_user = info["task"].get("start", "") != ""
         started_by_scheduler = info["started"]
         if started_by_scheduler and not started_by_user:
