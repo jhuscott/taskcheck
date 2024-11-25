@@ -269,10 +269,10 @@ def urgency_estimated(info, date, urgency_coefficients):
 def update_urgency(info, urgency_key, urgency_compute_fn, urgency_coefficients, date):
     urgency_value = urgency_compute_fn(info, date, urgency_coefficients)
     old_urgency = info[urgency_key]
-    if old_urgency != urgency_value:
-        print(
-            f"new urgency value for task {info['task']['id']}: {urgency_key}: {urgency_value}"
-        )
+    # if old_urgency != urgency_value:
+    #     print(
+    #         f"new urgency value for task {info['task']['id']}: {urgency_key}: {urgency_value}"
+    #     )
     info[urgency_key] = urgency_value
     info["urgency"] = info["urgency"] - old_urgency + urgency_value
 
