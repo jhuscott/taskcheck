@@ -65,14 +65,21 @@ instance:
 
 ## Algorithm
 
-The algorithm allocates a fixed amount of time for each task (e.g. 1 hour) and then recomputes the
-urgency and restart the allocation procedure.
+The algorithm simulates what happens if you work on a task for a certain time on a given day.
 
-If after 1 hour the long task has decreased urgency, that will be noticed and the newer most urgent
+For each day X starting from today, it sorts the tasks by decreasing urgency. 
+It start from the most urgent tasks that can be allocated on day X depending on the task's
+`time_map` and on your calendars. It allocates a few number of hours to the task,
+then recomputes the urgencies exactly as Taskwarrior would do
+if it was running on day X. Having recomputed the urgencies, it restarts.
+
+If after 2 hours a long task has decreased its urgency, it will be noticed and the newer most urgent
 task will get scheduled in its place.
 
-The minimum time for a task is by default 2 hours, but you can change it by tuning the `min_block`
-taskwarrior UDA.
+For `today`, taskcheck will consider as allocated the hours already past.
+
+The maximum time that is allocated at each attempt is by default 2 hours
+(or less if the task is shorter), but you can change it by tuning the Taskwarrior UDA `min_block`.
 
 ## Configuration
 
