@@ -9,6 +9,18 @@
       "env": {},
       "args": [],
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "uv (report)",
+      "type": "python",
+      "request": "launch",
+      "module": "taskcheck",
+      "env": {},
+      "args": [
+        "-r",
+        "mon"
+      ],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

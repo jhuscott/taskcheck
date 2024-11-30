@@ -185,7 +185,7 @@ wheels = [
 
 [[package]]
 name = "taskcheck"
-version = "0.3.2.post2"
+version = "0.3.3.post1"
 source = { virtual = "." }
 dependencies = [
     { name = "appdirs" },

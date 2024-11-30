@@ -179,7 +179,7 @@ DEFAULT_EMOJI_KEYWORDS = {
 
 
 def get_tasks(config, tasks, year, month, day):
-    regex = re.compile(rf"{year}-{month}-{day} - ([PDTHM0-9]+)")
+    regex = re.compile(rf"{year:04d}-{month:02d}-{day:02d} - ([PDTHM0-9]+)")
     valid_tasks = []
     for task in tasks:
         for line in task["scheduling"].split("\n"):
@@ -265,16 +265,16 @@ def generate_report(config, constraint, verbose=False):
     console = Console()
     tasks = fetch_tasks()
 
+    if config.get("include_unplanned"):
+        unplanned_tasks = get_unplanned_tasks(config, tasks)
+        display_unplanned_tasks(console, config, unplanned_tasks)
+
     for year, month, day in get_days_in_constraint(constraint):
         this_day_tasks = get_tasks(config, tasks, year, month, day)
 
         display_date_header(console, year, month, day)
 
         display_tasks_table(console, config, this_day_tasks)
-
-    if config.get("include_unplanned"):
-        unplanned_tasks = get_unplanned_tasks(config, tasks)
-        display_unplanned_tasks(console, config, unplanned_tasks)
 
 
 def fetch_tasks():
