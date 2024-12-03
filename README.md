@@ -27,7 +27,7 @@ It considers their estimated time to schedule all tasks starting from the most u
 
 #### UDAs
 
-Taskcheck leverages to UDAs, `estimated` and `time_map`. The `estimated` attribute is
+Taskcheck leverages two UDAs, `estimated` and `time_map`. The `estimated` attribute is
 the expected time to complete the task in hours. The `time_map` is a comma-separated list of strings
 that indicates the hours per day in which you will work on a task (e.g. `work`, `weekend`, etc.).
 The exact correspondence between the `time_map` and the hours of the day is defined in the configuration
@@ -61,25 +61,8 @@ how much time you have to work on which task in which day. For
 instance:
 
 - `taskcheck -r today` will show the tasks planned for today
-- `taskcheck -r 1w` will show the tasks planned for the next week,
+- `taskcheck -r 1w` will show the tasks planned for the next week
 
-## Algorithm
-
-The algorithm simulates what happens if you work on a task for a certain time on a given day.
-
-For each day X starting from today, it sorts the tasks by decreasing urgency. 
-It start from the most urgent tasks that can be allocated on day X depending on the task's
-`time_map` and on your calendars. It allocates a few number of hours to the task,
-then recomputes the urgencies exactly as Taskwarrior would do
-if it was running on day X. Having recomputed the urgencies, it restarts.
-
-If after 2 hours a long task has decreased its urgency, it will be noticed and the newer most urgent
-task will get scheduled in its place.
-
-For `today`, taskcheck will consider as allocated the hours already past.
-
-The maximum time that is allocated at each attempt is by default 2 hours
-(or less if the task is shorter), but you can change it by tuning the Taskwarrior UDA `min_block`.
 
 ## Configuration
 
@@ -125,6 +108,25 @@ emoji_keywords = {"meet"=":busts_in_silhouette:", "review"=":mag_right:"}
 include_unplanned = true # include unplanned tasks in the report in an ad-hoc section
 additional_attributes_unplanned = ["due", "urgency"] # additional attributes to show in the report for unplanned tasks
 ```
+
+## Algorithm
+
+The algorithm simulates what happens if you work on a task for a certain time on a given day.
+
+For each day X starting from today, it sorts the tasks by decreasing urgency. 
+It start from the most urgent tasks that can be allocated on day X depending on the task's
+`time_map` and on your calendars. It allocates a few number of hours to the task,
+then recomputes the urgencies exactly as Taskwarrior would do
+if it was running on day X. Having recomputed the urgencies, it restarts.
+
+If after 2 hours a long task has decreased its urgency, it will be noticed and the newer most urgent
+task will get scheduled in its place.
+
+For `today`, taskcheck will skip the hours in the past -- i.e. if you're running at 12 pm, it will
+skip all the available slots until 12 pm.
+
+The maximum time that is allocated at each attempt is by default 2 hours
+(or less if the task is shorter), but you can change it by tuning the Taskwarrior UDA `min_block`.
 
 ## Tips and Tricks
 
