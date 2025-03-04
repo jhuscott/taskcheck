@@ -14,3 +14,6 @@ dependencies = [
 
 [project.scripts]
 taskcheck = "taskcheck.__main__:main"
+
+[tool.setuptools]
+license-files = []
