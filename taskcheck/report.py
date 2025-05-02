@@ -315,7 +315,7 @@ def build_tasks_table(config, tasks):
     for task in tasks:
         task_id = f"[bold green]#{task['id']}[/bold green]"
         project = task.get("project", "")
-        description = Text(task["description"], style="white")
+        description = Text(task["description"], style="italic")
         hours = f"[yellow]{task['scheduling_hours']}[/yellow]"
         emoji = get_task_emoji(config, task)
 
@@ -382,7 +382,7 @@ def build_unplanned_tasks_table(config, tasks):
     for task in tasks:
         task_id = f"[bold green]#{task['id']}[/bold green]"
         project = task.get("project", "")
-        description = Text(task["description"], style="white")
+        description = Text(task["description"], style="italic")
         emoji = get_task_emoji(config, task)
 
         table.add_row(
