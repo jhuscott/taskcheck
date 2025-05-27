@@ -18,6 +18,7 @@ class TestArgumentParsing:
         assert args.force_update is False
         assert args.taskrc is None
         assert args.urgency_weight is None
+        assert args.dry_run is False
 
     def test_arg_parser_all_flags(self):
         """Test all command line flags."""
@@ -61,6 +62,14 @@ class TestArgumentParsing:
         
         args = arg_parser.parse_args(["--urgency-weight", "1.0"])
         assert args.urgency_weight == 1.0
+
+    def test_dry_run_argument(self):
+        """Test dry-run argument parsing."""
+        args = arg_parser.parse_args(["--dry-run"])
+        assert args.dry_run is True
+        
+        args = arg_parser.parse_args([])
+        assert args.dry_run is False
 
 
 class TestConfigLoading:
@@ -140,6 +149,7 @@ class TestMainFunction:
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
+                mock_args.dry_run = False
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -150,7 +160,8 @@ class TestMainFunction:
                     verbose=False, 
                     force_update=False, 
                     taskrc=test_taskrc,
-                    urgency_weight_override=None
+                    urgency_weight_override=None,
+                    dry_run=False
                 )
 
     @patch('taskcheck.__main__.load_config')
@@ -168,6 +179,7 @@ class TestMainFunction:
                 mock_args.verbose = True
                 mock_args.force_update = True
                 mock_args.taskrc = test_taskrc
+                mock_args.dry_run = False
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -178,7 +190,8 @@ class TestMainFunction:
                     "today", 
                     True, 
                     force_update=True, 
-                    taskrc=test_taskrc
+                    taskrc=test_taskrc,
+                    scheduling_results=None
                 )
 
     @patch('taskcheck.__main__.load_config')
@@ -198,6 +211,7 @@ class TestMainFunction:
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
+                mock_args.dry_run = False
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -223,6 +237,7 @@ class TestMainFunction:
                 mock_args.force_update = True
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
+                mock_args.dry_run = False
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -232,7 +247,8 @@ class TestMainFunction:
                     verbose=True,
                     force_update=True,
                     taskrc=test_taskrc,
-                    urgency_weight_override=None
+                    urgency_weight_override=None,
+                    dry_run=False
                 )
 
     @patch('taskcheck.__main__.load_config')
@@ -251,6 +267,7 @@ class TestMainFunction:
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = 0.3
+                mock_args.dry_run = False
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -260,8 +277,117 @@ class TestMainFunction:
                     verbose=False,
                     force_update=False,
                     taskrc=test_taskrc,
-                    urgency_weight_override=0.3
+                    urgency_weight_override=0.3,
+                    dry_run=False
                 )
+
+    @patch('taskcheck.__main__.load_config')
+    @patch('taskcheck.__main__.check_tasks_parallel')
+    def test_main_schedule_with_dry_run(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc):
+        """Test that dry-run mode returns scheduling results without modifying tasks."""
+        mock_load_config.return_value = sample_config
+        
+        # Mock dry-run results
+        dry_run_results = [
+            {
+                "id": "1",
+                "uuid": "test-uuid-1",
+                "description": "Test task 1",
+                "project": "test",
+                "urgency": 5.0,
+                "estimated": "PT2H",
+                "due": "20241225T120000Z",
+                "scheduled": "2024-12-20",
+                "completion_date": "2024-12-20",
+                "scheduling": "2024-12-20 - PT2H"
+            }
+        ]
+        mock_check_tasks.return_value = dry_run_results
+        
+        with patch('sys.argv', ['taskcheck', '--schedule', '--dry-run', '--taskrc', test_taskrc]):
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
+                mock_args.install = False
+                mock_args.schedule = True
+                mock_args.report = None
+                mock_args.verbose = False
+                mock_args.force_update = False
+                mock_args.taskrc = test_taskrc
+                mock_args.urgency_weight = None
+                mock_args.dry_run = True
+                mock_parse.return_value = mock_args
+                
+                main()
+        
+        # Verify that check_tasks_parallel was called with dry_run=True
+        mock_check_tasks.assert_called_once_with(
+            sample_config,
+            verbose=False,
+            force_update=False,
+            taskrc=test_taskrc,
+            urgency_weight_override=None,
+            dry_run=True
+        )
+        mock_load_config.assert_called_once()
+
+    @patch('taskcheck.__main__.load_config')
+    @patch('taskcheck.__main__.check_tasks_parallel')
+    @patch('taskcheck.report.generate_report')
+    def test_main_schedule_dry_run_with_report(self, mock_generate_report, mock_check_tasks, mock_load_config, sample_config, test_taskrc):
+        """Test that dry-run results are passed to report generation."""
+        mock_load_config.return_value = sample_config
+        
+        # Mock dry-run results
+        dry_run_results = [
+            {
+                "id": "1",
+                "uuid": "test-uuid-1", 
+                "description": "Test task 1",
+                "project": "test",
+                "urgency": 5.0,
+                "estimated": "PT2H",
+                "due": "20241225T120000Z",
+                "scheduled": "2024-12-20",
+                "completion_date": "2024-12-20",
+                "scheduling": "2024-12-20 - PT2H"
+            }
+        ]
+        mock_check_tasks.return_value = dry_run_results
+        
+        with patch('sys.argv', ['taskcheck', '--schedule', '--dry-run', '--report', 'today', '--taskrc', test_taskrc]):
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
+                mock_args.install = False
+                mock_args.schedule = True
+                mock_args.report = 'today'
+                mock_args.verbose = False
+                mock_args.force_update = False
+                mock_args.taskrc = test_taskrc
+                mock_args.urgency_weight = None
+                mock_args.dry_run = True
+                mock_parse.return_value = mock_args
+                
+                main()
+        
+        # Verify that generate_report was called with the dry-run results
+        mock_generate_report.assert_called_once_with(
+            sample_config,
+            'today',
+            False,
+            force_update=False,
+            taskrc=test_taskrc,
+            scheduling_results=dry_run_results
+        )
+        
+        # Verify that check_tasks_parallel was called with dry_run=True
+        mock_check_tasks.assert_called_once_with(
+            sample_config,
+            verbose=False,
+            force_update=False,
+            taskrc=test_taskrc,
+            urgency_weight_override=None,
+            dry_run=True
+        )
 
     @patch('taskcheck.__main__.load_config')
     def test_main_config_loading_error(self, mock_load_config):
