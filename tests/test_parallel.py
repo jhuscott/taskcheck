@@ -222,7 +222,8 @@ class TestWeightConfiguration:
                 "estimated_urgency": 5.0,
                 "due_urgency": 3.0,
                 "age_urgency": 1.0,
-                "remaining_hours": 2.0
+                "remaining_hours": 2.0,
+                "started": False
             }
         }
         
