@@ -37,6 +37,11 @@ arg_parser.add_argument(
     action="store",
     help="set custom TASKRC directory for debugging purposes",
 )
+arg_parser.add_argument(
+    "--urgency-weight",
+    type=float,
+    help="weight for urgency in scheduling (0.0 to 1.0), overrides config value. Due date weight will be 1 - urgency_weight",
+)
 
 
 # Load working hours and exceptions from TOML file
@@ -59,7 +64,7 @@ def main():
 
     if args.schedule:
         config = load_config()
-        check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update, taskrc=args.taskrc)
+        check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update, taskrc=args.taskrc, urgency_weight_override=args.urgency_weight)
         print_help = False
 
     if args.report:

@@ -13,8 +13,8 @@ friday = [[9, 12.30], [14, 17]]
 
 [scheduler]
 days_ahead = 365
-hybrid_weight_urgency = 1.0
-hybrid_weight_due_date = 0.0
+weight_urgency = 1.0
+weight_due_date = 0.0
 """
 
 
