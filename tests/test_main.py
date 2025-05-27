@@ -17,11 +17,12 @@ class TestArgumentParsing:
         assert args.schedule is False
         assert args.force_update is False
         assert args.taskrc is None
+        assert args.urgency_weight is None
 
     def test_arg_parser_all_flags(self):
         """Test all command line flags."""
         args = arg_parser.parse_args([
-            "-v", "-i", "-r", "today", "-s", "-f", "--taskrc", "/custom/path"
+            "-v", "-i", "-r", "today", "-s", "-f", "--taskrc", "/custom/path", "--urgency-weight", "0.7"
         ])
         
         assert args.verbose is True
@@ -30,12 +31,13 @@ class TestArgumentParsing:
         assert args.schedule is True
         assert args.force_update is True
         assert args.taskrc == "/custom/path"
+        assert args.urgency_weight == 0.7
 
     def test_arg_parser_long_form(self):
         """Test long form arguments."""
         args = arg_parser.parse_args([
             "--verbose", "--install", "--report", "eow", 
-            "--schedule", "--force-update", "--taskrc", "/test"
+            "--schedule", "--force-update", "--taskrc", "/test", "--urgency-weight", "0.3"
         ])
         
         assert args.verbose is True
@@ -44,6 +46,21 @@ class TestArgumentParsing:
         assert args.schedule is True
         assert args.force_update is True
         assert args.taskrc == "/test"
+        assert args.urgency_weight == 0.3
+
+    def test_urgency_weight_argument(self):
+        """Test urgency weight argument parsing."""
+        args = arg_parser.parse_args(["--urgency-weight", "0.7"])
+        assert args.urgency_weight == 0.7
+        
+    def test_urgency_weight_argument_validation(self):
+        """Test urgency weight argument with valid boundary values."""
+        # This should work
+        args = arg_parser.parse_args(["--urgency-weight", "0.0"])
+        assert args.urgency_weight == 0.0
+        
+        args = arg_parser.parse_args(["--urgency-weight", "1.0"])
+        assert args.urgency_weight == 1.0
 
 
 class TestConfigLoading:
@@ -122,6 +139,7 @@ class TestMainFunction:
                 mock_args.verbose = False
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
+                mock_args.urgency_weight = None
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -131,7 +149,8 @@ class TestMainFunction:
                     sample_config, 
                     verbose=False, 
                     force_update=False, 
-                    taskrc=test_taskrc
+                    taskrc=test_taskrc,
+                    urgency_weight_override=None
                 )
 
     @patch('taskcheck.__main__.load_config')
@@ -178,6 +197,7 @@ class TestMainFunction:
                 mock_args.verbose = False
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
+                mock_args.urgency_weight = None
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -202,6 +222,7 @@ class TestMainFunction:
                 mock_args.verbose = True
                 mock_args.force_update = True
                 mock_args.taskrc = test_taskrc
+                mock_args.urgency_weight = None
                 mock_parse.return_value = mock_args
                 
                 main()
@@ -210,7 +231,36 @@ class TestMainFunction:
                     sample_config,
                     verbose=True,
                     force_update=True,
-                    taskrc=test_taskrc
+                    taskrc=test_taskrc,
+                    urgency_weight_override=None
+                )
+
+    @patch('taskcheck.__main__.load_config')
+    @patch('taskcheck.__main__.check_tasks_parallel')
+    def test_main_schedule_with_urgency_weight_override(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
+        """Test schedule command with urgency weight override."""
+        mock_load_config.return_value = sample_config
+        
+        with patch('sys.argv', ['taskcheck', '--schedule', '--urgency-weight', '0.3', '--taskrc', test_taskrc]):
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
+                mock_args.install = False
+                mock_args.schedule = True
+                mock_args.report = None
+                mock_args.verbose = False
+                mock_args.force_update = False
+                mock_args.taskrc = test_taskrc
+                mock_args.urgency_weight = 0.3
+                mock_parse.return_value = mock_args
+                
+                main()
+                
+                mock_check_tasks.assert_called_once_with(
+                    sample_config,
+                    verbose=False,
+                    force_update=False,
+                    taskrc=test_taskrc,
+                    urgency_weight_override=0.3
                 )
 
     @patch('taskcheck.__main__.load_config')

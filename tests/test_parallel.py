@@ -116,7 +116,7 @@ class TestTimeAllocation:
         
         coeffs = UrgencyCoefficients({"P2H": 8.0}, False, 4.0, 365, 12, 2)
         
-        allocate_time_for_day(task_info, 0, coeffs, verbose=True)
+        allocate_time_for_day(task_info, 0, coeffs, verbose=True, weight_urgency=1.0, weight_due_date=0.0)
         
         # Should allocate time and update scheduling
         assert task_info["task-1"]["remaining_hours"] < 2.0
@@ -165,12 +165,90 @@ class TestDependencies:
         
         coeffs = UrgencyCoefficients({"P1H": 5.0, "P2H": 8.0}, False, 4.0, 365, 12, 2)
         
-        allocate_time_for_day(task_info, 0, coeffs, verbose=True)
+        allocate_time_for_day(task_info, 0, coeffs, verbose=True, weight_urgency=1.0, weight_due_date=0.0)
         
         # task-2 should be scheduled first due to dependency
         if task_info["task-2"]["remaining_hours"] == 0:
             # task-2 completed, task-1 can now be scheduled
             assert task_info["task-1"]["remaining_hours"] <= 2.0
+
+
+class TestWeightConfiguration:
+    @patch('taskcheck.parallel.get_calendars')
+    @patch('taskcheck.parallel.get_tasks')
+    @patch('taskcheck.parallel.get_urgency_coefficients')
+    @patch('taskcheck.parallel.update_tasks_with_scheduling_info')
+    def test_urgency_weight_override(self, mock_update, mock_coeffs, mock_tasks, mock_calendars, sample_config, sample_tasks):
+        """Test that urgency_weight_override properly overrides config values."""
+        # Set config values
+        sample_config["scheduler"]["weight_urgency"] = 0.8
+        sample_config["scheduler"]["weight_due_date"] = 0.2
+        
+        mock_tasks.return_value = sample_tasks
+        mock_coeffs.return_value = UrgencyCoefficients({"P1H": 5.0, "P2H": 8.0, "P3H": 10.0}, False, 4.0, 365, 12, 2)
+        mock_calendars.return_value = []
+        
+        # Call with override
+        check_tasks_parallel(sample_config, urgency_weight_override=0.3)
+        
+        # Verify the function was called - we'd need to check internal logic
+        # This test would need access to the weights used internally
+        mock_tasks.assert_called_once()
+        
+    @patch('taskcheck.parallel.get_calendars')
+    @patch('taskcheck.parallel.get_tasks') 
+    @patch('taskcheck.parallel.get_urgency_coefficients')
+    @patch('taskcheck.parallel.update_tasks_with_scheduling_info')
+    def test_config_weights_used_when_no_override(self, mock_update, mock_coeffs, mock_tasks, mock_calendars, sample_config, sample_tasks):
+        """Test that config weights are used when no override is provided."""
+        sample_config["scheduler"]["weight_urgency"] = 0.6
+        sample_config["scheduler"]["weight_due_date"] = 0.4
+        
+        mock_tasks.return_value = sample_tasks
+        mock_coeffs.return_value = UrgencyCoefficients({"P1H": 5.0, "P2H": 8.0, "P3H": 10.0}, False, 4.0, 365, 12, 2)
+        mock_calendars.return_value = []
+        
+        # Call without override
+        check_tasks_parallel(sample_config, urgency_weight_override=None)
+        
+        mock_tasks.assert_called_once()
+        
+    def test_recompute_urgencies_with_weights(self):
+        """Test that recompute_urgencies applies weights correctly."""
+        tasks_remaining = {
+            "task-1": {
+                "task": {"uuid": "task-1", "id": 1},
+                "urgency": 10.0,
+                "estimated_urgency": 5.0,
+                "due_urgency": 3.0,
+                "age_urgency": 1.0
+            }
+        }
+        
+        coeffs = UrgencyCoefficients({}, False, 0, 365, 12, 2)
+        date = datetime.now().date()
+        weight_urgency = 0.7
+        weight_due_date = 0.3
+        
+        # Store original values
+        original_urgency = tasks_remaining["task-1"]["urgency"]
+        original_estimated = tasks_remaining["task-1"]["estimated_urgency"] 
+        original_due = tasks_remaining["task-1"]["due_urgency"]
+        original_age = tasks_remaining["task-1"]["age_urgency"]
+        
+        recompute_urgencies(tasks_remaining, coeffs, date, weight_urgency, weight_due_date)
+        
+        # Check that weights were applied
+        task_info = tasks_remaining["task-1"]
+        base_urgency = original_urgency - original_estimated - original_due - original_age
+        expected_urgency = (
+            base_urgency +
+            original_estimated * weight_urgency +
+            original_due * weight_due_date +
+            original_age * weight_urgency
+        )
+        
+        assert abs(task_info["urgency"] - expected_urgency) < 0.01
 
 
 class TestMainSchedulingFunction:

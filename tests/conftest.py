@@ -31,7 +31,9 @@ def sample_config():
             }
         },
         "scheduler": {
-            "days_ahead": 7
+            "days_ahead": 7,
+            "weight_urgency": 1.0,
+            "weight_due_date": 0.0
         },
         "calendars": {
             "work_calendar": {
