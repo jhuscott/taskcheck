@@ -42,6 +42,11 @@ arg_parser.add_argument(
     type=float,
     help="weight for urgency in scheduling (0.0 to 1.0), overrides config value. Due date weight will be 1 - urgency_weight",
 )
+arg_parser.add_argument(
+    "--dry-run",
+    action="store_true",
+    help="perform scheduling without modifying the Taskwarrior database, useful for testing"
+)
 
 
 # Load working hours and exceptions from TOML file
@@ -56,6 +61,7 @@ def main():
     
     # Load data and check tasks
     print_help = True
+    result = None
     if args.install:
         from taskcheck.install import install
 
@@ -64,14 +70,18 @@ def main():
 
     if args.schedule:
         config = load_config()
-        check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update, taskrc=args.taskrc, urgency_weight_override=args.urgency_weight)
+        result = check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update, taskrc=args.taskrc, urgency_weight_override=args.urgency_weight, dry_run=args.dry_run)
         print_help = False
 
     if args.report:
         from taskcheck.report import generate_report
 
         config = load_config()
-        generate_report(config, args.report, args.verbose, force_update=args.force_update, taskrc=args.taskrc)
+        scheduling_results = None
+        if args.schedule and args.dry_run:
+            # If we just did a dry-run schedule, use those results
+            scheduling_results = result
+        generate_report(config, args.report, args.verbose, force_update=args.force_update, taskrc=args.taskrc, scheduling_results=scheduling_results)
         print_help = False
 
     if print_help:

@@ -268,12 +268,16 @@ def get_unplanned_tasks(config, tasks, taskrc=None):
     return tasks
 
 
-def generate_report(config, constraint, verbose=False, force_update=False, taskrc=None):
+def generate_report(config, constraint, verbose=False, force_update=False, taskrc=None, scheduling_results=None):
     config = config["report"]
     console = Console()
-    # this is the json that you need to create as output of `check_task_parallel`, AI!
-    # but if not in dry run mode, it will be fetched from taskwarrior, AI
-    tasks = fetch_tasks(taskrc)
+    
+    if scheduling_results is not None:
+        # Use provided scheduling results (from dry-run mode)
+        tasks = scheduling_results
+    else:
+        # Fetch tasks from Taskwarrior normally
+        tasks = fetch_tasks(taskrc)
 
     if config.get("include_unplanned"):
         unplanned_tasks = get_unplanned_tasks(config, tasks, taskrc=taskrc)

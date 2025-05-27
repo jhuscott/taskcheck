@@ -85,7 +85,7 @@ def get_urgency_coefficients(taskrc=None):
 
 
 def check_tasks_parallel(
-    config, verbose=False, force_update=False, taskrc=None, urgency_weight_override=None
+    config, verbose=False, force_update=False, taskrc=None, urgency_weight_override=None, dry_run=False
 ):
     tasks = get_tasks(taskrc=taskrc)
     time_maps = config["time_maps"]
@@ -116,10 +116,53 @@ def check_tasks_parallel(
             weight_due_date,
         )
 
-    # skip the call in dry-run mode, AI!
-    update_tasks_with_scheduling_info(task_info, verbose, taskrc)
-
-    # return a JSON, AI!
+    if dry_run:
+        # Generate JSON output instead of updating tasks
+        scheduling_results = []
+        for info in task_info.values():
+            task = info["task"]
+            if not info["scheduling"]:
+                continue
+            
+            scheduled_dates = sorted(info["scheduling"].keys())
+            start_date = scheduled_dates[0]
+            end_date = scheduled_dates[-1]
+            
+            scheduling_note = ""
+            for date_str in scheduled_dates:
+                hours = info["scheduling"][date_str]
+                scheduling_note += f"{date_str} - {hours_to_pdth(hours)}\n"
+            
+            task_result = {
+                "id": task["id"],
+                "uuid": task["uuid"],
+                "description": task["description"],
+                "project": task.get("project", ""),
+                "urgency": task.get("urgency", 0),
+                "estimated": task["estimated"],
+                "due": task.get("due", ""),
+                "scheduled": start_date,
+                "completion_date": end_date,
+                "scheduling": scheduling_note.strip()
+            }
+            
+            # Check if task will be completed on time
+            due = task.get("due")
+            end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            if due is not None and end_date_dt > datetime.strptime(due, "%Y%m%dT%H%M%SZ"):
+                task_result["warning"] = "Task may not be completed on time"
+                if verbose:
+                    console.print(
+                        f"[red]Warning: Task {task['id']} ('{task['description']}') is not going to be completed on time.[/red]"
+                    )
+            
+            scheduling_results.append(task_result)
+        
+        return scheduling_results
+    else:
+        # Normal operation - update tasks in Taskwarrior
+        update_tasks_with_scheduling_info(task_info, verbose, taskrc)
+        return None
 
 
 def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, calendars):
