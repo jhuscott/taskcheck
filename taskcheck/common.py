@@ -17,17 +17,18 @@ AVOID_STATUS = ["completed", "deleted", "recurring"]
 long_range_time_map = {}
 
 
-def get_task_env(taskdata=None):
+def get_task_env(taskrc=None):
     import os
     env = os.environ.copy()
-    if taskdata:
-        env['TASKDATA'] = taskdata
+    if taskrc:
+        env['TASKRC'] = taskrc
+        env['TASKDATA'] = taskrc
     return env
 
 
 # Get tasks from Taskwarrior and sort by urgency
-def get_tasks(taskdata=None):
-    env = get_task_env(taskdata)
+def get_tasks(taskrc=None):
+    env = get_task_env(taskrc)
     result = subprocess.run(["task", "export"], capture_output=True, text=True, env=env)
     tasks = json.loads(result.stdout)
     return sorted(
@@ -178,10 +179,10 @@ def get_long_range_time_map(
 
 
 def mark_end_date(
-    due_date, end_date, start_date, scheduling_note, id, description=None, taskdata=None
+    due_date, end_date, start_date, scheduling_note, id, description=None, taskrc=None
 ):
     start_end_fields = [f"scheduled:{start_date}", f"completion_date:{end_date}"]
-    env = get_task_env(taskdata)
+    env = get_task_env(taskrc)
 
     subprocess.run(
         [
