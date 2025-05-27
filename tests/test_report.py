@@ -179,7 +179,7 @@ class TestReportGeneration:
         # Should run without error
         generate_report(sample_config, "today", verbose=True, taskrc=test_taskrc)
         
-        mock_fetch.assert_called_once_with(taskrc=test_taskrc)
+        mock_fetch.assert_called_once_with(test_taskrc)
         mock_days.assert_called_once_with("today", taskrc=test_taskrc)
         
     @patch('taskcheck.report.fetch_tasks')
