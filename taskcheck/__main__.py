@@ -38,8 +38,6 @@ arg_parser.add_argument(
     help="set custom TASKRC directory for debugging purposes",
 )
 
-args = arg_parser.parse_args()
-
 
 # Load working hours and exceptions from TOML file
 def load_config():
@@ -49,6 +47,8 @@ def load_config():
 
 
 def main():
+    args = arg_parser.parse_args()
+    
     # Load data and check tasks
     print_help = True
     if args.install:
