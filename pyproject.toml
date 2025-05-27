@@ -15,8 +15,19 @@ dependencies = [
 [project.scripts]
 taskcheck = "taskcheck.__main__:main"
 
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools]
 license-files = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["taskcheck*"]
+
+[tool.uv]
+package = true
 
 [dependency-groups]
 dev = [
