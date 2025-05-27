@@ -20,8 +20,8 @@ from taskcheck.common import (
 class TestTimeConversions:
     def test_hours_to_decimal(self):
         assert hours_to_decimal(9.0) == 9.0
-        assert hours_to_decimal(9.5) == 9.5
-        assert hours_to_decimal(9.3) == 9.3
+        assert hours_to_decimal(9.30) == 9.5  # 9:30 -> 9.5 hours
+        assert hours_to_decimal(9.15) == 9.25  # 9:15 -> 9.25 hours
         
     def test_hours_to_time(self):
         assert hours_to_time(9.0) == time(9, 0)
