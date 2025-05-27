@@ -118,14 +118,14 @@ def get_cache_filename(url):
 
 
 def ical_to_dict(
-    url, days_ahead=7, all_day=False, expiration=0.25, verbose=False, tz_name=None
+    url, days_ahead=7, all_day=False, expiration=0.25, verbose=False, tz_name=None, force_update=False
 ):
     CACHE.mkdir(exist_ok=True, parents=True)
     cache_file = CACHE / get_cache_filename(url)
     current_time = time.time()
 
     # Check if cache file exists and is not expired
-    if cache_file.exists():
+    if cache_file.exists() and not force_update:
         cache_mtime = cache_file.stat().st_mtime
         if current_time - cache_mtime < expiration * 3600:
             with open(cache_file, "r") as f:

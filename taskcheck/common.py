@@ -190,7 +190,7 @@ def mark_end_date(
         print(f"\033[1;31mTask {id} {description} may not be completed on time\033[0m")
 
 
-def get_calendars(config, verbose=False):
+def get_calendars(config, verbose=False, force_update=False):
     calendars = []
     for calname in config["calendars"]:
         calendar = config["calendars"][calname]
@@ -201,6 +201,7 @@ def get_calendars(config, verbose=False):
             expiration=calendar["expiration"],
             verbose=verbose,
             tz_name=calendar.get("timezone"),
+            force_update=force_update,
         )
         calendar.sort(key=lambda e: e["start"])
         calendars.append(calendar)

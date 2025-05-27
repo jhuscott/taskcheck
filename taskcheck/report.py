@@ -260,7 +260,7 @@ def get_unplanned_tasks(config, tasks):
     return tasks
 
 
-def generate_report(config, constraint, verbose=False):
+def generate_report(config, constraint, verbose=False, force_update=False):
     config = config["report"]
     console = Console()
     tasks = fetch_tasks()

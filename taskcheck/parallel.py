@@ -82,11 +82,11 @@ def get_urgency_coefficients():
     )
 
 
-def check_tasks_parallel(config, verbose=False):
+def check_tasks_parallel(config, verbose=False, force_update=False):
     tasks = get_tasks()
     time_maps = config["time_maps"]
     days_ahead = config["scheduler"]["days_ahead"]
-    calendars = get_calendars(config)
+    calendars = get_calendars(config, verbose=verbose, force_update=force_update)
     urgency_coefficients = get_urgency_coefficients()
 
     task_info = initialize_task_info(
