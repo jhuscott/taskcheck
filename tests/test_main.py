@@ -16,12 +16,12 @@ class TestArgumentParsing:
         assert args.report is None
         assert args.schedule is False
         assert args.force_update is False
-        assert args.taskdata is None
+        assert args.taskrc is None
 
     def test_arg_parser_all_flags(self):
         """Test all command line flags."""
         args = arg_parser.parse_args([
-            "-v", "-i", "-r", "today", "-s", "-f", "--taskdata", "/custom/path"
+            "-v", "-i", "-r", "today", "-s", "-f", "--taskrc", "/custom/path"
         ])
         
         assert args.verbose is True
@@ -29,13 +29,13 @@ class TestArgumentParsing:
         assert args.report == "today"
         assert args.schedule is True
         assert args.force_update is True
-        assert args.taskdata == "/custom/path"
+        assert args.taskrc == "/custom/path"
 
     def test_arg_parser_long_form(self):
         """Test long form arguments."""
         args = arg_parser.parse_args([
             "--verbose", "--install", "--report", "eow", 
-            "--schedule", "--force-update", "--taskdata", "/test"
+            "--schedule", "--force-update", "--taskrc", "/test"
         ])
         
         assert args.verbose is True
@@ -43,7 +43,7 @@ class TestArgumentParsing:
         assert args.report == "eow"
         assert args.schedule is True
         assert args.force_update is True
-        assert args.taskdata == "/test"
+        assert args.taskrc == "/test"
 
 
 class TestConfigLoading:
@@ -106,18 +106,18 @@ class TestMainFunction:
 
     @patch('taskcheck.__main__.load_config')
     @patch('taskcheck.parallel.check_tasks_parallel')
-    def test_main_schedule_command(self, mock_check_tasks, mock_load_config, sample_config):
+    def test_main_schedule_command(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc):
         """Test schedule command execution."""
         mock_load_config.return_value = sample_config
         
-        with patch('sys.argv', ['taskcheck', '--schedule']):
+        with patch('sys.argv', ['taskcheck', '--schedule', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.args') as mock_args:
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = None
                 mock_args.verbose = False
                 mock_args.force_update = False
-                mock_args.taskdata = None
+                mock_args.taskrc = test_taskrc
                 
                 main()
                 
@@ -126,23 +126,23 @@ class TestMainFunction:
                     sample_config, 
                     verbose=False, 
                     force_update=False, 
-                    taskdata=None
+                    taskrc=test_taskrc
                 )
 
     @patch('taskcheck.__main__.load_config')
     @patch('taskcheck.report.generate_report')
-    def test_main_report_command(self, mock_generate_report, mock_load_config, sample_config):
+    def test_main_report_command(self, mock_generate_report, mock_load_config, sample_config, test_taskrc):
         """Test report command execution."""
         mock_load_config.return_value = sample_config
         
-        with patch('sys.argv', ['taskcheck', '--report', 'today']):
+        with patch('sys.argv', ['taskcheck', '--report', 'today', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.args') as mock_args:
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = "today"
                 mock_args.verbose = True
                 mock_args.force_update = True
-                mock_args.taskdata = "/custom"
+                mock_args.taskrc = test_taskrc
                 
                 main()
                 
@@ -152,24 +152,24 @@ class TestMainFunction:
                     "today", 
                     True, 
                     force_update=True, 
-                    taskdata="/custom"
+                    taskrc=test_taskrc
                 )
 
     @patch('taskcheck.__main__.load_config')
     @patch('taskcheck.parallel.check_tasks_parallel')
     @patch('taskcheck.report.generate_report')
-    def test_main_schedule_and_report(self, mock_generate_report, mock_check_tasks, mock_load_config, sample_config):
+    def test_main_schedule_and_report(self, mock_generate_report, mock_check_tasks, mock_load_config, sample_config, test_taskrc):
         """Test both schedule and report commands together."""
         mock_load_config.return_value = sample_config
         
-        with patch('sys.argv', ['taskcheck', '--schedule', '--report', 'eow']):
+        with patch('sys.argv', ['taskcheck', '--schedule', '--report', 'eow', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.args') as mock_args:
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = "eow"
                 mock_args.verbose = False
                 mock_args.force_update = False
-                mock_args.taskdata = None
+                mock_args.taskrc = test_taskrc
                 
                 main()
                 
@@ -179,18 +179,18 @@ class TestMainFunction:
                 mock_generate_report.assert_called_once()
 
     @patch('taskcheck.__main__.load_config')
-    def test_main_schedule_with_verbose_and_force_update(self, mock_load_config, sample_config):
+    def test_main_schedule_with_verbose_and_force_update(self, mock_load_config, sample_config, test_taskrc):
         """Test schedule command with verbose and force update flags."""
         mock_load_config.return_value = sample_config
         
-        with patch('sys.argv', ['taskcheck', '--schedule', '--verbose', '--force-update']):
+        with patch('sys.argv', ['taskcheck', '--schedule', '--verbose', '--force-update', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.args') as mock_args:
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = None
                 mock_args.verbose = True
                 mock_args.force_update = True
-                mock_args.taskdata = None
+                mock_args.taskrc = test_taskrc
                 
                 with patch('taskcheck.parallel.check_tasks_parallel') as mock_check:
                     main()
@@ -199,7 +199,7 @@ class TestMainFunction:
                         sample_config,
                         verbose=True,
                         force_update=True,
-                        taskdata=None
+                        taskrc=test_taskrc
                     )
 
     @patch('taskcheck.__main__.load_config')

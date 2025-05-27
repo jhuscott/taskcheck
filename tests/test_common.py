@@ -12,7 +12,8 @@ from taskcheck.common import (
     hours_to_pdth,
     get_long_range_time_map,
     get_tasks,
-    get_calendars
+    get_calendars,
+    get_task_env
 )
 
 
@@ -97,8 +98,8 @@ class TestLongRangeTimeMap:
 
 
 class TestGetTasks:
-    def test_get_tasks(self, mock_task_export, sample_tasks):
-        tasks = get_tasks()
+    def test_get_tasks(self, mock_task_export_with_taskrc, sample_tasks, test_taskrc):
+        tasks = get_tasks(taskrc=test_taskrc)
         
         # Should only return tasks with estimated field
         estimated_tasks = [t for t in tasks if "estimated" in t]
@@ -119,3 +120,21 @@ class TestGetCalendars:
         assert len(calendars) == 1
         assert calendars[0] == sample_calendar_events
         mock_ical.assert_called_once()
+
+
+class TestEnvironmentVariables:
+    def test_get_task_env_sets_both_variables(self, test_taskrc):
+        """Test that get_task_env sets both TASKDATA and TASKRC."""
+        env = get_task_env(taskrc=test_taskrc)
+        
+        assert env['TASKDATA'] == test_taskrc
+        assert env['TASKRC'] == test_taskrc
+        
+    def test_get_task_env_without_taskrc(self):
+        """Test that get_task_env returns unchanged environment when taskrc=None."""
+        import os
+        original_env = os.environ.copy()
+        env = get_task_env(taskrc=None)
+        
+        # Should not add TASKDATA or TASKRC if not specified
+        assert env == original_env

@@ -16,18 +16,22 @@ from taskcheck.report import (
 
 class TestDateUtilities:
     @patch('subprocess.run')
-    def test_get_taskwarrior_date_valid(self, mock_run):
+    def test_get_taskwarrior_date_valid(self, mock_run, test_taskrc):
         mock_result = Mock()
         mock_result.stdout = "2023-12-05T14:30:00\n"
         mock_run.return_value = mock_result
         
-        result = get_taskwarrior_date("today")
+        result = get_taskwarrior_date("today", taskrc=test_taskrc)
         
         assert result == datetime(2023, 12, 5, 14, 30, 0)
         mock_run.assert_called_once()
+        # Verify environment was passed
+        call_args = mock_run.call_args
+        assert 'env' in call_args.kwargs
+        assert call_args.kwargs['env']['TASKRC'] == test_taskrc
         
     @patch('subprocess.run')
-    def test_get_taskwarrior_date_relative(self, mock_run):
+    def test_get_taskwarrior_date_relative(self, mock_run, test_taskrc):
         # First call fails, second call with "today+" prefix succeeds
         mock_result_fail = Mock()
         mock_result_fail.stdout = "invalid\n"
@@ -37,20 +41,21 @@ class TestDateUtilities:
         
         mock_run.side_effect = [mock_result_fail, mock_result_success]
         
-        result = get_taskwarrior_date("1day")
+        result = get_taskwarrior_date("1day", taskrc=test_taskrc)
         
         assert result == datetime(2023, 12, 6, 14, 30, 0)
         assert mock_run.call_count == 2
         
-    def test_get_days_in_constraint(self):
+    def test_get_days_in_constraint(self, test_taskrc):
         with patch('taskcheck.report.get_taskwarrior_date') as mock_date:
             mock_date.return_value = datetime(2023, 12, 7, 0, 0, 0)
             
-            days = list(get_days_in_constraint("eow"))
+            days = list(get_days_in_constraint("eow", taskrc=test_taskrc))
             
             # Should return days from today until end of week
             assert len(days) > 0
             assert all(len(day) == 3 for day in days)  # (year, month, day)
+            mock_date.assert_called_once_with("eow", taskrc=test_taskrc)
 
 
 class TestTaskFiltering:
@@ -78,7 +83,7 @@ class TestTaskFiltering:
         assert result[0]["urgency"] >= result[1]["urgency"]  # Sorted by urgency
         
     @patch('subprocess.run')
-    def test_get_unplanned_tasks(self, mock_run, sample_config):
+    def test_get_unplanned_tasks(self, mock_run, sample_config, test_taskrc):
         unplanned_tasks = [
             {
                 "id": 3,
@@ -92,9 +97,13 @@ class TestTaskFiltering:
         mock_result.stdout = json.dumps(unplanned_tasks)
         mock_run.return_value = mock_result
         
-        result = get_unplanned_tasks(sample_config["report"], [])
+        result = get_unplanned_tasks(sample_config["report"], [], taskrc=test_taskrc)
         
         assert result == unplanned_tasks
+        # Verify environment was passed
+        call_args = mock_run.call_args
+        assert 'env' in call_args.kwargs
+        assert call_args.kwargs['env']['TASKRC'] == test_taskrc
 
 
 class TestStringFormatting:
@@ -148,7 +157,7 @@ class TestReportGeneration:
     @patch('taskcheck.report.fetch_tasks')
     @patch('taskcheck.report.get_days_in_constraint')
     @patch('taskcheck.report.get_unplanned_tasks')
-    def test_generate_report_basic(self, mock_unplanned, mock_days, mock_fetch, sample_config):
+    def test_generate_report_basic(self, mock_unplanned, mock_days, mock_fetch, sample_config, test_taskrc):
         mock_fetch.return_value = [
             {
                 "id": 1,
@@ -162,15 +171,15 @@ class TestReportGeneration:
         mock_unplanned.return_value = []
         
         # Should run without error
-        generate_report(sample_config, "today", verbose=True)
+        generate_report(sample_config, "today", verbose=True, taskrc=test_taskrc)
         
-        mock_fetch.assert_called_once()
-        mock_days.assert_called_once()
+        mock_fetch.assert_called_once_with(taskrc=test_taskrc)
+        mock_days.assert_called_once_with("today", taskrc=test_taskrc)
         
     @patch('taskcheck.report.fetch_tasks')
     @patch('taskcheck.report.get_days_in_constraint')
     @patch('taskcheck.report.get_unplanned_tasks')
-    def test_generate_report_with_unplanned(self, mock_unplanned, mock_days, mock_fetch, sample_config):
+    def test_generate_report_with_unplanned(self, mock_unplanned, mock_days, mock_fetch, sample_config, test_taskrc):
         mock_fetch.return_value = []
         mock_days.return_value = [(2023, 12, 5)]
         mock_unplanned.return_value = [
@@ -183,6 +192,6 @@ class TestReportGeneration:
         ]
         
         # Should run without error
-        generate_report(sample_config, "today", verbose=True)
+        generate_report(sample_config, "today", verbose=True, taskrc=test_taskrc)
         
-        mock_unplanned.assert_called_once()
+        mock_unplanned.assert_called_once_with(sample_config["report"], [], taskrc=test_taskrc)

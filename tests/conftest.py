@@ -111,6 +111,12 @@ def sample_calendar_events():
 
 
 @pytest.fixture
+def test_taskrc():
+    """Provide a consistent test taskrc path."""
+    return "/tmp/taskcheck/"
+
+
+@pytest.fixture
 def mock_subprocess_run():
     """Mock subprocess.run for Taskwarrior commands."""
     with patch('subprocess.run') as mock_run:
@@ -121,6 +127,38 @@ def mock_subprocess_run():
 def mock_task_export(sample_tasks):
     """Mock task export command."""
     def _mock_run(cmd, **kwargs):
+        mock_result = Mock()
+        if cmd == ["task", "export"]:
+            mock_result.stdout = json.dumps(sample_tasks)
+        elif cmd[0] == "task" and "_show" in cmd:
+            mock_result.stdout = """urgency.uda.estimated.P1H.coefficient=5.0
+urgency.uda.estimated.P2H.coefficient=8.0
+urgency.uda.estimated.P3H.coefficient=10.0
+urgency.inherit=1
+urgency.active.coefficient=4.0
+urgency.age.max=365
+urgency.due.coefficient=12.0
+urgency.age.coefficient=2.0"""
+        else:
+            mock_result.stdout = ""
+        mock_result.stderr = ""
+        mock_result.returncode = 0
+        return mock_result
+    
+    with patch('subprocess.run', side_effect=_mock_run):
+        yield
+
+
+@pytest.fixture
+def mock_task_export_with_taskrc(sample_tasks, test_taskrc):
+    """Mock task export command with taskrc verification."""
+    def _mock_run(cmd, **kwargs):
+        # Verify environment is passed correctly when using taskrc
+        env = kwargs.get('env')
+        if env and 'TASKRC' in env:
+            assert env['TASKRC'] == test_taskrc
+            assert env['TASKDATA'] == test_taskrc
+        
         mock_result = Mock()
         if cmd == ["task", "export"]:
             mock_result.stdout = json.dumps(sample_tasks)

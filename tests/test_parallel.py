@@ -16,8 +16,8 @@ from taskcheck.parallel import (
 
 
 class TestUrgencyCoefficients:
-    def test_get_urgency_coefficients(self, mock_task_export):
-        coeffs = get_urgency_coefficients()
+    def test_get_urgency_coefficients(self, mock_task_export_with_taskrc, test_taskrc):
+        coeffs = get_urgency_coefficients(taskrc=test_taskrc)
         
         assert isinstance(coeffs, UrgencyCoefficients)
         assert "P1H" in coeffs.estimated
@@ -171,14 +171,14 @@ class TestMainSchedulingFunction:
     @patch('taskcheck.parallel.get_tasks')
     @patch('taskcheck.parallel.get_urgency_coefficients')
     @patch('taskcheck.parallel.update_tasks_with_scheduling_info')
-    def test_check_tasks_parallel(self, mock_update, mock_coeffs, mock_tasks, mock_calendars, sample_config, sample_tasks):
+    def test_check_tasks_parallel(self, mock_update, mock_coeffs, mock_tasks, mock_calendars, sample_config, sample_tasks, test_taskrc):
         mock_tasks.return_value = sample_tasks
         mock_coeffs.return_value = UrgencyCoefficients({"P1H": 5.0, "P2H": 8.0, "P3H": 10.0}, False, 4.0, 365, 12, 2)
         mock_calendars.return_value = []
         
-        check_tasks_parallel(sample_config, verbose=True)
+        check_tasks_parallel(sample_config, verbose=True, taskrc=test_taskrc)
         
-        mock_tasks.assert_called_once()
-        mock_coeffs.assert_called_once()
+        mock_tasks.assert_called_once_with(taskrc=test_taskrc)
+        mock_coeffs.assert_called_once_with(taskrc=test_taskrc)
         mock_calendars.assert_called_once()
         mock_update.assert_called_once()
