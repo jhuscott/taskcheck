@@ -81,24 +81,27 @@ class TestMainFunction:
     def test_main_no_args_shows_help(self, capsys):
         """Test that main shows help when no arguments provided."""
         with patch('sys.argv', ['taskcheck']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_parse.return_value = mock_args
                 
-                main()
-                
-                # Should print help
-                assert mock_args is not None
+                with patch.object(arg_parser, 'print_help') as mock_help:
+                    main()
+                    mock_help.assert_called_once()
 
     @patch('taskcheck.install.install')
     def test_main_install_command(self, mock_install):
         """Test install command execution."""
         with patch('sys.argv', ['taskcheck', '--install']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = True
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_parse.return_value = mock_args
                 
                 main()
                 
@@ -111,13 +114,15 @@ class TestMainFunction:
         mock_load_config.return_value = sample_config
         
         with patch('sys.argv', ['taskcheck', '--schedule', '--taskrc', test_taskrc]):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = None
                 mock_args.verbose = False
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
+                mock_parse.return_value = mock_args
                 
                 main()
                 
@@ -136,13 +141,15 @@ class TestMainFunction:
         mock_load_config.return_value = sample_config
         
         with patch('sys.argv', ['taskcheck', '--report', 'today', '--taskrc', test_taskrc]):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = "today"
                 mock_args.verbose = True
                 mock_args.force_update = True
                 mock_args.taskrc = test_taskrc
+                mock_parse.return_value = mock_args
                 
                 main()
                 
@@ -163,13 +170,15 @@ class TestMainFunction:
         mock_load_config.return_value = sample_config
         
         with patch('sys.argv', ['taskcheck', '--schedule', '--report', 'eow', '--taskrc', test_taskrc]):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = "eow"
                 mock_args.verbose = False
                 mock_args.force_update = False
                 mock_args.taskrc = test_taskrc
+                mock_parse.return_value = mock_args
                 
                 main()
                 
@@ -184,13 +193,15 @@ class TestMainFunction:
         mock_load_config.return_value = sample_config
         
         with patch('sys.argv', ['taskcheck', '--schedule', '--verbose', '--force-update', '--taskrc', test_taskrc]):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = None
                 mock_args.verbose = True
                 mock_args.force_update = True
                 mock_args.taskrc = test_taskrc
+                mock_parse.return_value = mock_args
                 
                 with patch('taskcheck.parallel.check_tasks_parallel') as mock_check:
                     main()
@@ -208,10 +219,12 @@ class TestMainFunction:
         mock_load_config.side_effect = FileNotFoundError("Config not found")
         
         with patch('sys.argv', ['taskcheck', '--schedule']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = None
+                mock_parse.return_value = mock_args
                 
                 with pytest.raises(FileNotFoundError):
                     main()
@@ -219,10 +232,12 @@ class TestMainFunction:
     def test_main_help_display(self):
         """Test that help is displayed when no valid commands are given."""
         with patch('sys.argv', ['taskcheck']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_parse.return_value = mock_args
                 
                 with patch.object(arg_parser, 'print_help') as mock_help:
                     main()
@@ -232,10 +247,12 @@ class TestMainFunction:
     def test_main_install_returns_early(self, mock_install):
         """Test that install command returns without processing other commands."""
         with patch('sys.argv', ['taskcheck', '--install', '--schedule']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = True
                 mock_args.schedule = True
                 mock_args.report = None
+                mock_parse.return_value = mock_args
                 
                 with patch('taskcheck.__main__.load_config') as mock_load:
                     main()
@@ -249,10 +266,12 @@ class TestImportErrorHandling:
     def test_install_import_error(self):
         """Test behavior when install module cannot be imported."""
         with patch('sys.argv', ['taskcheck', '--install']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = True
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_parse.return_value = mock_args
                 
                 with patch('builtins.__import__', side_effect=ImportError("Install module not found")):
                     with pytest.raises(ImportError):
@@ -261,10 +280,12 @@ class TestImportErrorHandling:
     def test_report_import_error(self):
         """Test behavior when report module cannot be imported."""
         with patch('sys.argv', ['taskcheck', '--report', 'today']):
-            with patch('taskcheck.__main__.args') as mock_args:
+            with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
+                mock_args = Mock()
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = "today"
+                mock_parse.return_value = mock_args
                 
                 with patch('taskcheck.__main__.load_config', return_value={}):
                     with patch('builtins.__import__', side_effect=ImportError("Report module not found")):
