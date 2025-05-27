@@ -48,14 +48,20 @@ class TestDateUtilities:
         
     def test_get_days_in_constraint(self, test_taskrc):
         with patch('taskcheck.report.get_taskwarrior_date') as mock_date:
-            mock_date.return_value = datetime(2023, 12, 7, 0, 0, 0)
-            
-            days = list(get_days_in_constraint("eow", taskrc=test_taskrc))
-            
-            # Should return days from today until end of week
-            assert len(days) > 0
-            assert all(len(day) == 3 for day in days)  # (year, month, day)
-            mock_date.assert_called_once_with("eow", taskrc=test_taskrc)
+            with patch('taskcheck.report.datetime') as mock_datetime:
+                # Mock the constraint date (end of week)
+                mock_date.return_value = datetime(2023, 12, 7, 0, 0, 0)
+                
+                # Mock datetime.today() to return an earlier date
+                mock_datetime.today.return_value = datetime(2023, 12, 5, 0, 0, 0)
+                mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+                
+                days = list(get_days_in_constraint("eow", taskrc=test_taskrc))
+                
+                # Should return days from Dec 5 to Dec 7 (3 days)
+                assert len(days) == 3
+                assert all(len(day) == 3 for day in days)  # (year, month, day)
+                mock_date.assert_called_once_with("eow", taskrc=test_taskrc)
 
 
 class TestTaskFiltering:
