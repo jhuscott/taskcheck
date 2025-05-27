@@ -26,6 +26,12 @@ arg_parser.add_argument(
     action="store_true",
     help="perform the scheduling algorithm, giving a schedule and a scheduling UDA and alerting for not completable tasks",
 )
+arg_parser.add_argument(
+    "-f",
+    "--force-update",
+    action="store_true",
+    help="force update of all ical calendars by ignoring cache expiration",
+)
 
 args = arg_parser.parse_args()
 
@@ -48,14 +54,14 @@ def main():
 
     if args.schedule:
         config = load_config()
-        check_tasks_parallel(config, verbose=args.verbose)
+        check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update)
         print_help = False
 
     if args.report:
         from taskcheck.report import generate_report
 
         config = load_config()
-        generate_report(config, args.report, args.verbose)
+        generate_report(config, args.report, args.verbose, force_update=args.force_update)
         print_help = False
 
     if print_help:
