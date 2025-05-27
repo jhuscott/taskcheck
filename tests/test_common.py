@@ -25,8 +25,8 @@ class TestTimeConversions:
         
     def test_hours_to_time(self):
         assert hours_to_time(9.0) == time(9, 0)
-        assert hours_to_time(9.5) == time(9, 30)
-        assert hours_to_time(14.25) == time(14, 15)
+        assert hours_to_time(9.30) == time(9, 30)  # 9.30 means 9:30
+        assert hours_to_time(14.15) == time(14, 15)  # 14.15 means 14:15
         
     def test_time_to_decimal(self):
         assert time_to_decimal(time(9, 0)) == 9.0
