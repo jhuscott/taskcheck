@@ -221,11 +221,12 @@ class TestWeightConfiguration:
                 "urgency": 10.0,
                 "estimated_urgency": 5.0,
                 "due_urgency": 3.0,
-                "age_urgency": 1.0
+                "age_urgency": 1.0,
+                "remaining_hours": 2.0
             }
         }
         
-        coeffs = UrgencyCoefficients({}, False, 0, 365, 12, 2)
+        coeffs = UrgencyCoefficients({"P1H": 5.0, "P2H": 8.0}, False, 0, 365, 12, 2)
         date = datetime.now().date()
         weight_urgency = 0.7
         weight_due_date = 0.3
