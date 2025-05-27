@@ -206,18 +206,21 @@ def get_tasks(config, tasks, year, month, day):
     return valid_tasks
 
 
-def get_taskwarrior_date(date, _retry=True):
+def get_taskwarrior_date(date, _retry=True, taskdata=None):
+    from taskcheck.common import get_task_env
+    env = get_task_env(taskdata)
     date = subprocess.run(
         ["task", "calc", date],
         capture_output=True,
         text=True,
+        env=env,
     )
     date = date.stdout.strip()
     try:
         date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S")
     except Exception as _:
         if _retry:
-            return get_taskwarrior_date("today+" + date, False)
+            return get_taskwarrior_date("today+" + date, False, taskdata)
         else:
             print(
                 "Please provide a valid date. Check with `task calc` that your date is in the format YYYY-MM-DDTHH:MM:SS",
@@ -227,9 +230,9 @@ def get_taskwarrior_date(date, _retry=True):
     return date
 
 
-def get_days_in_constraint(constraint):
+def get_days_in_constraint(constraint, taskdata=None):
     current_date = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    constraint = get_taskwarrior_date(constraint)
+    constraint = get_taskwarrior_date(constraint, taskdata=taskdata)
     while current_date <= constraint:
         yield current_date.year, current_date.month, current_date.day
         current_date += timedelta(days=1)
@@ -250,26 +253,29 @@ def tostring(value):
         return str(value)
 
 
-def get_unplanned_tasks(config, tasks):
+def get_unplanned_tasks(config, tasks, taskdata=None):
+    from taskcheck.common import get_task_env
+    env = get_task_env(taskdata)
     tasks = subprocess.run(
         ["task", "scheduling:", "status:pending", "export"],
         capture_output=True,
         text=True,
+        env=env,
     )
     tasks = json.loads(tasks.stdout)
     return tasks
 
 
-def generate_report(config, constraint, verbose=False, force_update=False):
+def generate_report(config, constraint, verbose=False, force_update=False, taskdata=None):
     config = config["report"]
     console = Console()
-    tasks = fetch_tasks()
+    tasks = fetch_tasks(taskdata)
 
     if config.get("include_unplanned"):
-        unplanned_tasks = get_unplanned_tasks(config, tasks)
+        unplanned_tasks = get_unplanned_tasks(config, tasks, taskdata)
         display_unplanned_tasks(console, config, unplanned_tasks)
 
-    for year, month, day in get_days_in_constraint(constraint):
+    for year, month, day in get_days_in_constraint(constraint, taskdata):
         this_day_tasks = get_tasks(config, tasks, year, month, day)
 
         display_date_header(console, year, month, day)
@@ -277,12 +283,15 @@ def generate_report(config, constraint, verbose=False, force_update=False):
         display_tasks_table(console, config, this_day_tasks)
 
 
-def fetch_tasks():
+def fetch_tasks(taskdata=None):
     """Fetch tasks from the task manager and return them as a JSON object."""
+    from taskcheck.common import get_task_env
+    env = get_task_env(taskdata)
     tasks = subprocess.run(
         ["task", "scheduling~.", "(", "+PENDING", "or", "+WAITING", ")", "export"],
         capture_output=True,
         text=True,
+        env=env,
     )
     return json.loads(tasks.stdout)
 

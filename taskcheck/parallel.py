@@ -12,6 +12,7 @@ from taskcheck.common import (
     hours_to_pdth,
     pdth_to_hours,
     hours_to_decimal,
+    get_task_env,
 )
 
 
@@ -25,13 +26,14 @@ class UrgencyCoefficients:
     urgency_age: int
 
 
-def get_urgency_coefficients():
+def get_urgency_coefficients(taskdata=None):
     """
     Retrieves urgency coefficients from Taskwarrior configurations.
     Returns a dictionary mapping 'estimated.<value>.coefficient' to its float value and a
     boolean indicating if the urgency should be inherited by its dependants (`urgency.inherit`).
     """
-    result = subprocess.run(["task", "_show"], capture_output=True, text=True)
+    env = get_task_env(taskdata)
+    result = subprocess.run(["task", "_show"], capture_output=True, text=True, env=env)
     inherit_urgency = False
     active_task_coefficient = 0
     est_coeffs = {}
@@ -82,12 +84,12 @@ def get_urgency_coefficients():
     )
 
 
-def check_tasks_parallel(config, verbose=False, force_update=False):
-    tasks = get_tasks()
+def check_tasks_parallel(config, verbose=False, force_update=False, taskdata=None):
+    tasks = get_tasks(taskdata=taskdata)
     time_maps = config["time_maps"]
     days_ahead = config["scheduler"]["days_ahead"]
     calendars = get_calendars(config, verbose=verbose, force_update=force_update)
-    urgency_coefficients = get_urgency_coefficients()
+    urgency_coefficients = get_urgency_coefficients(taskdata=taskdata)
 
     task_info = initialize_task_info(
         tasks, time_maps, days_ahead, urgency_coefficients, calendars
@@ -96,7 +98,7 @@ def check_tasks_parallel(config, verbose=False, force_update=False):
     for day_offset in range(days_ahead):
         allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose)
 
-    update_tasks_with_scheduling_info(task_info, verbose)
+    update_tasks_with_scheduling_info(task_info, verbose, taskdata)
 
 
 def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, calendars):
@@ -359,7 +361,7 @@ def update_task_scheduling(info, allocation, date_str):
     info["scheduling"][date_str] += allocation
 
 
-def update_tasks_with_scheduling_info(task_info, verbose):
+def update_tasks_with_scheduling_info(task_info, verbose, taskdata):
     for info in task_info.values():
         task = info["task"]
         scheduling_note = ""
@@ -383,6 +385,7 @@ def update_tasks_with_scheduling_info(task_info, verbose):
             ],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=get_task_env(taskdata),
         )
         due = task.get("due")
         end_date = datetime.strptime(end_date, "%Y-%m-%d")

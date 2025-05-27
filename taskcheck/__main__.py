@@ -32,6 +32,11 @@ arg_parser.add_argument(
     action="store_true",
     help="force update of all ical calendars by ignoring cache expiration",
 )
+arg_parser.add_argument(
+    "--taskdata",
+    action="store",
+    help="set custom TASKDATA directory for debugging purposes",
+)
 
 args = arg_parser.parse_args()
 
@@ -54,14 +59,14 @@ def main():
 
     if args.schedule:
         config = load_config()
-        check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update)
+        check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update, taskdata=args.taskdata)
         print_help = False
 
     if args.report:
         from taskcheck.report import generate_report
 
         config = load_config()
-        generate_report(config, args.report, args.verbose, force_update=args.force_update)
+        generate_report(config, args.report, args.verbose, force_update=args.force_update, taskdata=args.taskdata)
         print_help = False
 
     if print_help:
