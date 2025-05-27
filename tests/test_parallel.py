@@ -232,7 +232,7 @@ class TestWeightConfiguration:
         weight_urgency = 0.7
         weight_due_date = 0.3
         
-        # Store original values
+        # Store original urgency to calculate base
         original_urgency = tasks_remaining["task-1"]["urgency"]
         original_estimated = tasks_remaining["task-1"]["estimated_urgency"] 
         original_due = tasks_remaining["task-1"]["due_urgency"]
@@ -240,14 +240,19 @@ class TestWeightConfiguration:
         
         recompute_urgencies(tasks_remaining, coeffs, date, weight_urgency, weight_due_date)
         
-        # Check that weights were applied
+        # Check that weights were applied to the NEW urgency values (after recomputation)
         task_info = tasks_remaining["task-1"]
+        
+        # The function first recomputes urgencies, then applies weights
+        # We need to calculate what the base urgency should be after recomputation
         base_urgency = original_urgency - original_estimated - original_due - original_age
+        
+        # The expected urgency uses the recomputed component values, not the original ones
         expected_urgency = (
             base_urgency +
-            original_estimated * weight_urgency +
-            original_due * weight_due_date +
-            original_age * weight_urgency
+            task_info["estimated_urgency"] * weight_urgency +
+            task_info["due_urgency"] * weight_due_date +
+            task_info["age_urgency"] * weight_urgency
         )
         
         assert abs(task_info["urgency"] - expected_urgency) < 0.01
