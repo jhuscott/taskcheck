@@ -36,7 +36,12 @@ class TestIcalFetching:
 
 
 class TestIcalParsing:
-    def test_parse_ical_events_simple(self, mock_ical_response):
+    @patch('taskcheck.ical.datetime')
+    def test_parse_ical_events_simple(self, mock_datetime, mock_ical_response):
+        # Mock datetime.now() to return a date that makes the test events valid
+        mock_datetime.now.return_value = datetime(2023, 12, 1, 12, 0, 0)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        
         events = parse_ical_events(mock_ical_response, days_ahead=7, all_day=False)
         
         assert len(events) >= 1
@@ -46,7 +51,11 @@ class TestIcalParsing:
             assert isinstance(event["start"], str)
             assert isinstance(event["end"], str)
             
-    def test_parse_ical_events_with_timezone(self, mock_ical_response):
+    @patch('taskcheck.ical.datetime')
+    def test_parse_ical_events_with_timezone(self, mock_datetime, mock_ical_response):
+        mock_datetime.now.return_value = datetime(2023, 12, 1, 12, 0, 0)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        
         events = parse_ical_events(
             mock_ical_response, 
             days_ahead=7, 
@@ -56,7 +65,11 @@ class TestIcalParsing:
         
         assert len(events) >= 0
         
-    def test_parse_ical_events_recurring(self):
+    @patch('taskcheck.ical.datetime')
+    def test_parse_ical_events_recurring(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 12, 1, 12, 0, 0)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        
         ical_with_recurring = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:test
@@ -74,7 +87,11 @@ END:VCALENDAR"""
         # Should have 3 occurrences
         assert len(events) == 3
         
-    def test_parse_ical_events_all_day(self):
+    @patch('taskcheck.ical.datetime')
+    def test_parse_ical_events_all_day(self, mock_datetime):
+        mock_datetime.now.return_value = datetime(2023, 12, 1, 12, 0, 0)
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+        
         ical_all_day = """BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:test
