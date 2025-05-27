@@ -22,8 +22,8 @@ class UrgencyCoefficients:
     inherit: bool
     active: float
     age_max: int
-    urgency_due: int
-    urgency_age: int
+    urgency_due: float
+    urgency_age: float
 
 
 def get_urgency_coefficients(taskrc=None):
@@ -68,11 +68,11 @@ def get_urgency_coefficients(taskrc=None):
 
         match = pattern5.match(line)
         if match:
-            urgency_due = int(match.group(1))
+            urgency_due = float(match.group(1))
 
         match = pattern6.match(line)
         if match:
-            urgency_age = int(match.group(1))
+            urgency_age = float(match.group(1))
 
     return UrgencyCoefficients(
         est_coeffs,
