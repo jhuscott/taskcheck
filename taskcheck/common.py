@@ -109,12 +109,18 @@ def pdth_to_hours(duration_str):
         days, duration_str = duration_str.split("D")
         days = int(days)
     if "H" in duration_str:
-        hours = int(duration_str.split("T")[1].split("H")[0])
+        if "T" in duration_str:
+            hours = int(duration_str.split("T")[1].split("H")[0])
+        else:
+            hours = int(duration_str.split("H")[0])
     if "M" in duration_str:
         if "H" in duration_str:
             minutes = int(duration_str.split("H")[1].split("M")[0])
         else:
-            minutes = int(duration_str.split("T")[1].split("M")[0])
+            if "T" in duration_str:
+                minutes = int(duration_str.split("T")[1].split("M")[0])
+            else:
+                minutes = int(duration_str.split("M")[0])
     return days * 24 + hours + minutes / 60
 
 
