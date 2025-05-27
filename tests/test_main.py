@@ -109,7 +109,7 @@ class TestMainFunction:
 
     @patch('taskcheck.__main__.load_config')
     @patch('taskcheck.parallel.check_tasks_parallel')
-    def test_main_schedule_command(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc):
+    def test_main_schedule_command(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
         """Test schedule command execution."""
         mock_load_config.return_value = sample_config
         
@@ -165,7 +165,7 @@ class TestMainFunction:
     @patch('taskcheck.__main__.load_config')
     @patch('taskcheck.parallel.check_tasks_parallel')
     @patch('taskcheck.report.generate_report')
-    def test_main_schedule_and_report(self, mock_generate_report, mock_check_tasks, mock_load_config, sample_config, test_taskrc):
+    def test_main_schedule_and_report(self, mock_generate_report, mock_check_tasks, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
         """Test both schedule and report commands together."""
         mock_load_config.return_value = sample_config
         
@@ -188,7 +188,7 @@ class TestMainFunction:
                 mock_generate_report.assert_called_once()
 
     @patch('taskcheck.__main__.load_config')
-    def test_main_schedule_with_verbose_and_force_update(self, mock_load_config, sample_config, test_taskrc):
+    def test_main_schedule_with_verbose_and_force_update(self, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
         """Test schedule command with verbose and force update flags."""
         mock_load_config.return_value = sample_config
         
