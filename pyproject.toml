@@ -17,3 +17,12 @@ taskcheck = "taskcheck.__main__:main"
 
 [tool.setuptools]
 license-files = []
+
+[dependency-groups]
+dev = [
+    "freezegun>=1.5.2",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "pytest-mock>=3.14.1",
+    "responses>=0.25.7",
+]
