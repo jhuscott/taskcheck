@@ -96,7 +96,12 @@ class TestTimeAllocation:
     def test_allocate_time_for_day_single_task(self, sample_config):
         task_info = {
             "task-1": {
-                "task": {"id": 1, "uuid": "task-1", "description": "Test task"},
+                "task": {
+                    "id": 1, 
+                    "uuid": "task-1", 
+                    "description": "Test task",
+                    "estimated": "P2H"
+                },
                 "remaining_hours": 2.0,
                 "task_time_map": [8.0, 8.0, 8.0],
                 "today_used_hours": 0.0,
@@ -126,7 +131,8 @@ class TestDependencies:
                     "id": 1, 
                     "uuid": "task-1", 
                     "description": "Dependent task",
-                    "depends": ["task-2"]
+                    "depends": ["task-2"],
+                    "estimated": "P2H"
                 },
                 "remaining_hours": 2.0,
                 "task_time_map": [8.0, 8.0, 8.0],
@@ -142,7 +148,8 @@ class TestDependencies:
                 "task": {
                     "id": 2, 
                     "uuid": "task-2", 
-                    "description": "Dependency task"
+                    "description": "Dependency task",
+                    "estimated": "P1H"
                 },
                 "remaining_hours": 1.0,
                 "task_time_map": [8.0, 8.0, 8.0],
