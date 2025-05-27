@@ -84,11 +84,13 @@ def get_urgency_coefficients(taskrc=None):
     )
 
 
-def check_tasks_parallel(config, verbose=False, force_update=False, taskrc=None, urgency_weight_override=None):
+def check_tasks_parallel(
+    config, verbose=False, force_update=False, taskrc=None, urgency_weight_override=None
+):
     tasks = get_tasks(taskrc=taskrc)
     time_maps = config["time_maps"]
     days_ahead = config["scheduler"]["days_ahead"]
-    
+
     # Handle weight configuration
     if urgency_weight_override is not None:
         weight_urgency = urgency_weight_override
@@ -96,7 +98,7 @@ def check_tasks_parallel(config, verbose=False, force_update=False, taskrc=None,
     else:
         weight_urgency = config["scheduler"].get("weight_urgency", 1.0)
         weight_due_date = config["scheduler"].get("weight_due_date", 0.0)
-    
+
     calendars = get_calendars(config, verbose=verbose, force_update=force_update)
     urgency_coefficients = get_urgency_coefficients(taskrc=taskrc)
 
@@ -105,9 +107,19 @@ def check_tasks_parallel(config, verbose=False, force_update=False, taskrc=None,
     )
 
     for day_offset in range(days_ahead):
-        allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose, weight_urgency, weight_due_date)
+        allocate_time_for_day(
+            task_info,
+            day_offset,
+            urgency_coefficients,
+            verbose,
+            weight_urgency,
+            weight_due_date,
+        )
 
+    # skip the call in dry-run mode, AI!
     update_tasks_with_scheduling_info(task_info, verbose, taskrc)
+
+    # return a JSON, AI!
 
 
 def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, calendars):
@@ -145,7 +157,14 @@ def initialize_task_info(tasks, time_maps, days_ahead, urgency_coefficients, cal
     return task_info
 
 
-def allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose, weight_urgency, weight_due_date):
+def allocate_time_for_day(
+    task_info,
+    day_offset,
+    urgency_coefficients,
+    verbose,
+    weight_urgency,
+    weight_due_date,
+):
     date = datetime.today().date() + timedelta(days=day_offset)
     total_available_hours = compute_total_available_hours(task_info, day_offset)
     # if verbose:
@@ -157,7 +176,9 @@ def allocate_time_for_day(task_info, day_offset, urgency_coefficients, verbose, 
     tasks_remaining = prepare_tasks_remaining(task_info, day_offset)
 
     while day_remaining_hours > 0 and tasks_remaining:
-        recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urgency, weight_due_date)
+        recompute_urgencies(
+            tasks_remaining, urgency_coefficients, date, weight_urgency, weight_due_date
+        )
         sorted_task_ids = sorted(
             tasks_remaining.keys(),
             key=lambda x: tasks_remaining[x]["urgency"],
@@ -222,7 +243,7 @@ def compute_total_available_hours(task_info, day_offset):
         ]
     else:
         total_hours_list = [
-            info["task_time_map"][day_offset] 
+            info["task_time_map"][day_offset]
             for info in task_info.values()
             if day_offset < len(info["task_time_map"])
         ]
@@ -234,7 +255,9 @@ def prepare_tasks_remaining(task_info, day_offset):
     return {
         info["task"]["uuid"]: info
         for info in task_info.values()
-        if info["remaining_hours"] > 0 and day_offset < len(info["task_time_map"]) and info["task_time_map"][day_offset] > 0
+        if info["remaining_hours"] > 0
+        and day_offset < len(info["task_time_map"])
+        and info["task_time_map"][day_offset] > 0
     }
 
 
@@ -291,7 +314,9 @@ def update_urgency(info, urgency_key, urgency_compute_fn, urgency_coefficients, 
     info["urgency"] = info["urgency"] - old_urgency + urgency_value
 
 
-def recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urgency, weight_due_date):
+def recompute_urgencies(
+    tasks_remaining, urgency_coefficients, date, weight_urgency, weight_due_date
+):
     """Recompute urgency simulating that today is `date`"""
     # Recompute estimated urgencies as before
     for info in tasks_remaining.values():
@@ -305,12 +330,17 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urge
         update_urgency(info, "age_urgency", urgency_age, urgency_coefficients, date)
 
         # Apply weights to create a combined score
-        base_urgency = info["urgency"] - info["estimated_urgency"] - info["due_urgency"] - info["age_urgency"]
+        base_urgency = (
+            info["urgency"]
+            - info["estimated_urgency"]
+            - info["due_urgency"]
+            - info["age_urgency"]
+        )
         weighted_urgency = (
-            base_urgency +
-            info["estimated_urgency"] * weight_urgency +
-            info["due_urgency"] * weight_due_date +
-            info["age_urgency"] * weight_urgency
+            base_urgency
+            + info["estimated_urgency"] * weight_urgency
+            + info["due_urgency"] * weight_due_date
+            + info["age_urgency"] * weight_urgency
         )
         info["urgency"] = weighted_urgency
 
@@ -357,7 +387,7 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urge
 def allocate_time_to_task(info, day_offset, day_remaining_hours):
     if day_offset >= len(info["task_time_map"]):
         return 0
-        
+
     task_daily_available = info["task_time_map"][day_offset]
     if task_daily_available <= 0:
         return 0

@@ -208,6 +208,7 @@ def get_tasks(config, tasks, year, month, day):
 
 def get_taskwarrior_date(date, _retry=True, taskrc=None):
     from taskcheck.common import get_task_env
+
     env = get_task_env(taskrc)
     date = subprocess.run(
         ["task", "calc", date],
@@ -255,6 +256,7 @@ def tostring(value):
 
 def get_unplanned_tasks(config, tasks, taskrc=None):
     from taskcheck.common import get_task_env
+
     env = get_task_env(taskrc)
     tasks = subprocess.run(
         ["task", "scheduling:", "status:pending", "export"],
@@ -269,6 +271,8 @@ def get_unplanned_tasks(config, tasks, taskrc=None):
 def generate_report(config, constraint, verbose=False, force_update=False, taskrc=None):
     config = config["report"]
     console = Console()
+    # this is the json that you need to create as output of `check_task_parallel`, AI!
+    # but if not in dry run mode, it will be fetched from taskwarrior, AI
     tasks = fetch_tasks(taskrc)
 
     if config.get("include_unplanned"):
@@ -286,6 +290,7 @@ def generate_report(config, constraint, verbose=False, force_update=False, taskr
 def fetch_tasks(taskrc=None):
     """Fetch tasks from the task manager and return them as a JSON object."""
     from taskcheck.common import get_task_env
+
     env = get_task_env(taskrc)
     tasks = subprocess.run(
         ["task", "scheduling~.", "(", "+PENDING", "or", "+WAITING", ")", "export"],
