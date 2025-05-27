@@ -209,10 +209,13 @@ def compute_total_available_hours(task_info, day_offset):
         total_hours_list = [
             info["task_time_map"][day_offset] - info["today_used_hours"]
             for info in task_info.values()
+            if day_offset < len(info["task_time_map"])
         ]
     else:
         total_hours_list = [
-            info["task_time_map"][day_offset] for info in task_info.values()
+            info["task_time_map"][day_offset] 
+            for info in task_info.values()
+            if day_offset < len(info["task_time_map"])
         ]
     total_available_hours = max(total_hours_list) if total_hours_list else 0
     return total_available_hours
@@ -222,7 +225,7 @@ def prepare_tasks_remaining(task_info, day_offset):
     return {
         info["task"]["uuid"]: info
         for info in task_info.values()
-        if info["remaining_hours"] > 0 and info["task_time_map"][day_offset] > 0
+        if info["remaining_hours"] > 0 and day_offset < len(info["task_time_map"]) and info["task_time_map"][day_offset] > 0
     }
 
 
@@ -333,6 +336,9 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients, date):
 
 
 def allocate_time_to_task(info, day_offset, day_remaining_hours):
+    if day_offset >= len(info["task_time_map"]):
+        return 0
+        
     task_daily_available = info["task_time_map"][day_offset]
     if task_daily_available <= 0:
         return 0
