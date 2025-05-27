@@ -275,7 +275,7 @@ def generate_report(config, constraint, verbose=False, force_update=False, taskr
         unplanned_tasks = get_unplanned_tasks(config, tasks, taskrc)
         display_unplanned_tasks(console, config, unplanned_tasks)
 
-    for year, month, day in get_days_in_constraint(constraint, taskrc):
+    for year, month, day in get_days_in_constraint(constraint, taskrc=taskrc):
         this_day_tasks = get_tasks(config, tasks, year, month, day)
 
         display_date_header(console, year, month, day)
