@@ -108,12 +108,10 @@ class TestMainFunction:
                 mock_install.assert_called_once()
 
     @patch('taskcheck.__main__.load_config')
-    @patch('taskcheck.parallel.get_calendars')
-    @patch('taskcheck.parallel.check_tasks_parallel')
-    def test_main_schedule_command(self, mock_check_tasks, mock_get_calendars, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
+    @patch('taskcheck.__main__.check_tasks_parallel')
+    def test_main_schedule_command(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
         """Test schedule command execution."""
         mock_load_config.return_value = sample_config
-        mock_get_calendars.return_value = []
         
         with patch('sys.argv', ['taskcheck', '--schedule', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
@@ -165,13 +163,11 @@ class TestMainFunction:
                 )
 
     @patch('taskcheck.__main__.load_config')
-    @patch('taskcheck.parallel.get_calendars')
-    @patch('taskcheck.parallel.check_tasks_parallel')
+    @patch('taskcheck.__main__.check_tasks_parallel')
     @patch('taskcheck.report.generate_report')
-    def test_main_schedule_and_report(self, mock_generate_report, mock_check_tasks, mock_get_calendars, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
+    def test_main_schedule_and_report(self, mock_generate_report, mock_check_tasks, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
         """Test both schedule and report commands together."""
         mock_load_config.return_value = sample_config
-        mock_get_calendars.return_value = []
         
         with patch('sys.argv', ['taskcheck', '--schedule', '--report', 'eow', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
@@ -192,11 +188,10 @@ class TestMainFunction:
                 mock_generate_report.assert_called_once()
 
     @patch('taskcheck.__main__.load_config')
-    @patch('taskcheck.parallel.get_calendars')
-    def test_main_schedule_with_verbose_and_force_update(self, mock_get_calendars, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
+    @patch('taskcheck.__main__.check_tasks_parallel')
+    def test_main_schedule_with_verbose_and_force_update(self, mock_check_tasks, mock_load_config, sample_config, test_taskrc, mock_task_export_with_taskrc):
         """Test schedule command with verbose and force update flags."""
         mock_load_config.return_value = sample_config
-        mock_get_calendars.return_value = []
         
         with patch('sys.argv', ['taskcheck', '--schedule', '--verbose', '--force-update', '--taskrc', test_taskrc]):
             with patch('taskcheck.__main__.arg_parser.parse_args') as mock_parse:
@@ -209,15 +204,14 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_parse.return_value = mock_args
                 
-                with patch('taskcheck.parallel.check_tasks_parallel') as mock_check:
-                    main()
-                    
-                    mock_check.assert_called_once_with(
-                        sample_config,
-                        verbose=True,
-                        force_update=True,
-                        taskrc=test_taskrc
-                    )
+                main()
+                
+                mock_check_tasks.assert_called_once_with(
+                    sample_config,
+                    verbose=True,
+                    force_update=True,
+                    taskrc=test_taskrc
+                )
 
     @patch('taskcheck.__main__.load_config')
     def test_main_config_loading_error(self, mock_load_config):
