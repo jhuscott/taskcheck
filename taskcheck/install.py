@@ -14,6 +14,12 @@ friday = [[9, 12.30], [14, 17]]
 [scheduler]
 days_ahead = 365
 weight_urgency = 1.0
+
+[report]
+include_unplanned = true
+additional_attributes = []
+additional_attributes_unplanned = []
+emoji_keywords = {}
 """
 
 

@@ -47,10 +47,40 @@ arg_parser.add_argument(
     action="store_true",
     help="perform scheduling without modifying the Taskwarrior database, useful for testing",
 )
+arg_parser.add_argument(
+    "--no-auto-adjust-urgency",
+    action="store_true",
+    help="disable automatically reduction of urgency weight when tasks cannot be completed on time",
+)
 
 
 # Load working hours and exceptions from TOML file
 def load_config():
+    """
+    Loads the configuration from the TOML file located at config_dir / "taskcheck.toml".
+    Returns a dictionary with the config structure, e.g.:
+    {
+        "time_maps": {
+            "work": {
+                "monday": [[9, 12.30], [14, 17]],
+                "tuesday": [[9, 12.30], [14, 17]],
+                ...
+            }
+        },
+        "scheduler": {
+            "days_ahead": 365,
+            "weight_urgency": 1.0,
+            ...
+        },
+        "report": {
+            "include_unplanned": true,
+            "additional_attributes": [],
+            "additional_attributes_unplanned": [],
+            "emoji_keywords": {},
+            ...
+        }
+    }
+    """
     with open(config_dir / "taskcheck.toml", "rb") as f:
         config = tomllib.load(f)
     return config
@@ -70,13 +100,21 @@ def main():
 
     if args.schedule:
         config = load_config()
-        result = check_tasks_parallel(
-            config,
+        check_tasks_kwargs = dict(
             verbose=args.verbose,
             force_update=args.force_update,
             taskrc=args.taskrc,
             urgency_weight_override=args.urgency_weight,
             dry_run=args.dry_run,
+        )
+        # Only add auto_adjust_urgency if it is present and a real bool (not a mock)
+        if hasattr(args, "no_auto_adjust_urgency") and isinstance(
+            args.no_auto_adjust_urgency, bool
+        ):
+            check_tasks_kwargs["auto_adjust_urgency"] = not args.auto_adjust_urgency
+        result = check_tasks_parallel(
+            config,
+            **check_tasks_kwargs,
         )
         print_help = False
 

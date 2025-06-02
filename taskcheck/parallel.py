@@ -1,19 +1,19 @@
-import subprocess
+import copy
 import re
+import subprocess
 from dataclasses import dataclass
-
 from datetime import datetime, timedelta
-from rich.console import Console
+
 from taskcheck.common import (
     AVOID_STATUS,
     console,
     get_calendars,
     get_long_range_time_map,
+    get_task_env,
     get_tasks,
+    hours_to_decimal,
     hours_to_pdth,
     pdth_to_hours,
-    hours_to_decimal,
-    get_task_env,
 )
 
 
@@ -92,34 +92,94 @@ def check_tasks_parallel(
     taskrc=None,
     urgency_weight_override=None,
     dry_run=False,
+    auto_adjust_urgency=False,
 ):
+    """
+    config: dict loaded from load_config(), see its docstring for structure.
+    """
     tasks = get_tasks(taskrc=taskrc)
     time_maps = config["time_maps"]
     days_ahead = config["scheduler"]["days_ahead"]
 
     # Handle weight configuration
     if urgency_weight_override is not None:
-        weight_urgency = urgency_weight_override
+        initial_weight_urgency = urgency_weight_override
     else:
-        weight_urgency = config["scheduler"].get("weight_urgency", 1.0)
+        initial_weight_urgency = config["scheduler"].get("weight_urgency", 1.0)
 
     calendars = get_calendars(config, verbose=verbose, force_update=force_update)
     urgency_coefficients = get_urgency_coefficients(taskrc=taskrc)
 
-    task_info = initialize_task_info(
+    current_weight = initial_weight_urgency
+
+    # Always re-initialize task_info inside the loop to avoid mutated state
+    task_info_original = initialize_task_info(
         tasks, time_maps, days_ahead, urgency_coefficients, calendars
     )
+    task_info = copy.deepcopy(task_info_original)
+    tasks_overdue = []
+    while current_weight >= 0.0:
+        if verbose and auto_adjust_urgency and current_weight < initial_weight_urgency:
+            console.print(
+                f"[yellow]Retrying with urgency weight: {current_weight:.1f}[/yellow]"
+            )
 
-    console = Console()
+        task_info = copy.deepcopy(task_info_original)
+        for day_offset in range(days_ahead):
+            allocate_time_for_day(
+                task_info,
+                day_offset,
+                urgency_coefficients,
+                verbose,
+                current_weight,
+            )
 
-    for day_offset in range(days_ahead):
-        allocate_time_for_day(
-            task_info,
-            day_offset,
-            urgency_coefficients,
-            verbose,
-            weight_urgency,
+        # Check if any tasks cannot be completed on time
+        tasks_overdue = []
+        for info in task_info.values():
+            task = info["task"]
+            if not info["scheduling"]:
+                continue
+
+            scheduled_dates = sorted(info["scheduling"].keys())
+            if not scheduled_dates:
+                continue
+            end_date = scheduled_dates[-1]
+
+            due = task.get("due")
+            if due is not None:
+                end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                due_dt = datetime.strptime(due, "%Y%m%dT%H%M%SZ")
+                if end_date_dt > due_dt:
+                    tasks_overdue.append(task)
+
+        # If no tasks are overdue or auto-adjust is disabled, break the loop
+        if not tasks_overdue or not auto_adjust_urgency:
+            break
+
+        # If we have overdue tasks and auto-adjust is enabled, reduce weight and try again
+        if verbose:
+            console.print(
+                f"[red]{len(tasks_overdue)} task(s) cannot be completed on time[/red]"
+            )
+
+        current_weight = round(current_weight - 0.1, 1)
+
+        if current_weight < 0.0:
+            break
+
+    # After loop completes, check if we still have overdue tasks
+    if auto_adjust_urgency and (tasks_overdue and current_weight <= 0):
+        # Print final weight message
+        console.print(
+            f"[green]Final urgency weight: {max(current_weight, 0.0):.1f}[/green]"
         )
+        # Always print the warning if we still have overdue tasks
+        console.print(
+            "[red]Warning: cannot find a solution even with urgency weight 0.0[/red]"
+        )
+
+    # Do not print the final urgency weight message again here, as it is already printed above if needed.
 
     if dry_run:
         # Generate JSON output instead of updating tasks
@@ -168,6 +228,7 @@ def check_tasks_parallel(
     else:
         # Normal operation - update tasks in Taskwarrior
         update_tasks_with_scheduling_info(task_info, verbose, taskrc)
+
         return None
 
 

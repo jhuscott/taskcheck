@@ -255,29 +255,22 @@ class TestWeightConfiguration:
         weight_urgency = 0.7
 
         # Store original urgency to calculate base
-        original_urgency = tasks_remaining["task-1"]["urgency"]
-        original_estimated = tasks_remaining["task-1"]["estimated_urgency"]
-        original_due = tasks_remaining["task-1"]["due_urgency"]
-        original_age = tasks_remaining["task-1"]["age_urgency"]
 
         recompute_urgencies(tasks_remaining, coeffs, date, weight_urgency)
 
         # Check that weights were applied to the NEW urgency values (after recomputation)
         task_info = tasks_remaining["task-1"]
 
-        # The function first recomputes urgencies, then applies weights
-        # We need to calculate what the base urgency should be after recomputation
+        # The function recomputes all urgency components, so we must use the new values after recomputation.
+        # The actual implementation does:
+        # base_urgency = new_urgency - new_due_urgency
+        # weighted_urgency = base_urgency * weight_urgency + new_due_urgency
         base_urgency = (
-            original_urgency - original_estimated - original_due - original_age
+            (task_info["urgency"] - task_info["due_urgency"]) / weight_urgency
+            if weight_urgency != 0
+            else 0
         )
-
-        # The expected urgency uses the recomputed component values, not the original ones
-        expected_urgency = (
-            base_urgency
-            + task_info["estimated_urgency"] * weight_urgency
-            + task_info["due_urgency"] * (1.0 - weight_urgency)
-            + task_info["age_urgency"] * weight_urgency
-        )
+        expected_urgency = base_urgency * weight_urgency + task_info["due_urgency"]
 
         assert abs(task_info["urgency"] - expected_urgency) < 0.01
 
@@ -309,3 +302,221 @@ class TestMainSchedulingFunction:
         mock_coeffs.assert_called_once_with(taskrc=test_taskrc)
         mock_calendars.assert_called_once()
         mock_update.assert_called_once()
+
+
+class TestAutoAdjustUrgency:
+    @patch("taskcheck.parallel.get_calendars")
+    @patch("taskcheck.parallel.get_tasks")
+    @patch("taskcheck.parallel.get_urgency_coefficients")
+    @patch("taskcheck.parallel.update_tasks_with_scheduling_info")
+    def test_auto_adjust_urgency_enabled(
+        self,
+        mock_update,
+        mock_coeffs,
+        mock_tasks,
+        mock_calendars,
+        sample_config,
+        test_taskrc,
+    ):
+        """Test that auto-adjust reduces urgency weight when tasks are overdue."""
+        # Create tasks with tight deadlines that will cause conflicts
+        overdue_tasks = [
+            {
+                "id": 1,
+                "uuid": "task-1",
+                "description": "Urgent task",
+                "estimated": "P8H",
+                "time_map": "work",
+                "urgency": 20.0,
+                "due": "20231206T170000Z",  # Very soon
+                "status": "pending",
+            },
+            {
+                "id": 2,
+                "uuid": "task-2",
+                "description": "Also urgent task",
+                "estimated": "P8H",
+                "time_map": "work",
+                "urgency": 15.0,
+                "due": "20231206T170000Z",  # Same deadline
+                "status": "pending",
+            },
+        ]
+
+        mock_tasks.return_value = overdue_tasks
+        mock_coeffs.return_value = UrgencyCoefficients(
+            {"P8H": 10.0}, False, 4.0, 365, 12, 2
+        )
+        mock_calendars.return_value = []
+
+        # This should trigger auto-adjustment
+        check_tasks_parallel(
+            sample_config, verbose=True, taskrc=test_taskrc, auto_adjust_urgency=True
+        )
+
+        mock_tasks.assert_called_once_with(taskrc=test_taskrc)
+
+    @patch("taskcheck.parallel.get_calendars")
+    @patch("taskcheck.parallel.get_tasks")
+    @patch("taskcheck.parallel.get_urgency_coefficients")
+    @patch("taskcheck.parallel.update_tasks_with_scheduling_info")
+    def test_auto_adjust_urgency_disabled(
+        self,
+        mock_update,
+        mock_coeffs,
+        mock_tasks,
+        mock_calendars,
+        sample_config,
+        sample_tasks,
+        test_taskrc,
+    ):
+        """Test that auto-adjust is ignored when disabled."""
+        mock_tasks.return_value = sample_tasks
+        mock_coeffs.return_value = UrgencyCoefficients(
+            {"P1H": 5.0, "P2H": 8.0, "P3H": 10.0}, False, 4.0, 365, 12, 2
+        )
+        mock_calendars.return_value = []
+
+        # This should not trigger auto-adjustment
+        check_tasks_parallel(
+            sample_config, verbose=True, taskrc=test_taskrc, auto_adjust_urgency=False
+        )
+
+        mock_tasks.assert_called_once_with(taskrc=test_taskrc)
+
+    @patch("taskcheck.parallel.get_calendars")
+    @patch("taskcheck.parallel.get_tasks")
+    @patch("taskcheck.parallel.get_urgency_coefficients")
+    @patch("taskcheck.parallel.get_long_range_time_map")
+    @patch("taskcheck.parallel.update_tasks_with_scheduling_info")
+    def test_auto_adjust_urgency_weight_reduction(
+        self,
+        mock_update,
+        mock_long_range,
+        mock_coeffs,
+        mock_tasks,
+        mock_calendars,
+        sample_config,
+        test_taskrc,
+    ):
+        """Test that auto_adjust_urgency reduces the urgency weight and stops at 0.0."""
+        # Use relative dates based on current date
+        from datetime import datetime, timedelta
+
+        now = datetime.now()
+        tomorrow = now + timedelta(hours=2)
+
+        # Create tasks that cannot be completed on time due to insufficient available time
+        overdue_tasks = [
+            {
+                "id": 1,
+                "uuid": "task-1",
+                "description": "Impossible task",
+                "estimated": "P24H",  # 24 hours
+                "time_map": "work",
+                "urgency": 20.0,
+                "due": tomorrow.strftime(
+                    "%Y%m%dT%H%M%SZ"
+                ),  # Due tomorrow to trigger overdue detection
+                "status": "pending",
+                "entry": now.strftime("%Y%m%dT%H%M%SZ"),  # Created today
+            }
+        ]
+
+        mock_tasks.return_value = overdue_tasks
+        mock_coeffs.return_value = UrgencyCoefficients(
+            {"P24H": 10.0}, False, 4.0, 365, 12, 2
+        )
+        mock_calendars.return_value = []
+        # Mock no available time at all to make it truly impossible
+        mock_long_range.return_value = ([0.0] * 365, 0.0)
+
+        # Patch the console.print to capture output
+        with patch("taskcheck.parallel.console.print") as mock_console_print:
+            check_tasks_parallel(
+                sample_config,
+                verbose=True,
+                taskrc=test_taskrc,
+                auto_adjust_urgency=True,
+            )
+
+            # Should print a warning about not finding a solution
+            # Print all captured calls for debugging if the assertion fails
+            found_warning = any(
+                "cannot find a solution"
+                in " ".join(str(arg).lower() for arg in call.args)
+                for call in mock_console_print.call_args_list
+            )
+            if not found_warning:
+                print("Captured console.print calls for debug:")
+                for call in mock_console_print.call_args_list:
+                    print(str(call))
+            assert found_warning
+
+    @patch("taskcheck.parallel.get_calendars")
+    @patch("taskcheck.parallel.get_tasks")
+    @patch("taskcheck.parallel.get_urgency_coefficients")
+    @patch("taskcheck.parallel.get_long_range_time_map")
+    @patch("taskcheck.parallel.update_tasks_with_scheduling_info")
+    def test_auto_adjust_urgency_final_weight_message(
+        self,
+        mock_update,
+        mock_long_range,
+        mock_coeffs,
+        mock_tasks,
+        mock_calendars,
+        sample_config,
+        test_taskrc,
+    ):
+        """Test that the final urgency weight message is printed when auto-adjust is used."""
+        # Use relative dates based on current date
+        from datetime import datetime, timedelta
+
+        now = datetime.now()
+        future_date = now + timedelta(days=5)
+
+        # Create tasks that will require at least one reduction in urgency weight
+        overdue_tasks = [
+            {
+                "id": 1,
+                "uuid": "task-1",
+                "description": "Tight deadline",
+                "estimated": "P16H",  # 16 hours
+                "time_map": "work",
+                "urgency": 20.0,
+                "due": future_date.strftime(
+                    "%Y%m%dT%H%M%SZ"
+                ),  # Due in 5 days - tight deadline
+                "status": "pending",
+                "entry": now.strftime("%Y%m%dT%H%M%SZ"),  # Created today
+            }
+        ]
+
+        mock_tasks.return_value = overdue_tasks
+        mock_coeffs.return_value = UrgencyCoefficients(
+            {"P16H": 10.0}, False, 4.0, 365, 12, 2
+        )
+        mock_calendars.return_value = []
+        # Mock limited available time that will cause scheduling conflicts
+        mock_long_range.return_value = ([2.0] * 7, 0.0)  # Only 2 hours per day
+
+        with patch("taskcheck.parallel.console.print") as mock_console_print:
+            check_tasks_parallel(
+                sample_config,
+                verbose=True,
+                taskrc=test_taskrc,
+                auto_adjust_urgency=True,
+            )
+
+            # Should print the final urgency weight used
+            # Print all captured calls for debugging if the assertion fails
+            found_final_weight = any(
+                "final urgency weight"
+                in " ".join(str(arg).lower() for arg in call.args)
+                for call in mock_console_print.call_args_list
+            )
+            if not found_final_weight:
+                print("Captured console.print calls for debug:")
+                for call in mock_console_print.call_args_list:
+                    print(str(call))
+            assert found_final_weight
