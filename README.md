@@ -9,9 +9,15 @@ This is a taskwarrior extension checks if tasks can be completed on time, consid
 
 ## Features
 
-- [x] Use arbitrarily complex time maps
-- [x] Use ical to block time from scheduling (e.g. for meetings, vacations, etc.)
-- [x] Implement scheduling algorithm for parallely working on multiple tasks
+- [x] **Use arbitrarily complex time maps for working hours**
+- [x] Block scheduling time using iCal calendars (meetings, vacations, holidays, etc.)
+- [x] **Parallel scheduling algorithm for multiple tasks, considering urgency and dependencies**
+- [x] Dry-run mode: preview scheduling without modifying your Taskwarrior database
+- [x] Custom urgency weighting for scheduling (via CLI or config)
+- [x] **Auto-fix urgency to mach due dates**
+- [x] Force update of iCal calendars, bypassing cache
+- [x] Simple, customizable reports for planned and unplanned tasks
+- [x] Emoji and attribute customization in reports
 - [ ] Use Google API to access calendars
 - [ ] Export tasks to iCal calendar and API calendars
 
@@ -63,18 +69,16 @@ instance:
 - `taskcheck -r today` will show the tasks planned for today
 - `taskcheck -r 1w` will show the tasks planned for the next week
 
-
 ## Configuration
 
 `taskcheck --install` allows you to create required and recommended configurations for
-   taskwarrior. It will also generate a default configuration file for taskcheck.
+Taskwarrior. It will also generate a default configuration file for taskcheck.
 
-Below is an example of taskcheck configuration file:
+Below is an example of a taskcheck configuration file, with all relevant options:
 
 ```toml
 [time_maps]
-# in which hours you will work in each day (in 24h format, if you use e.g. 25.67 you will likely 
-# get an error)
+# Define your working hours for each named time map (in 24h format, e.g. 9.5 = 9:30)
 [time_maps.work]
 monday = [[9, 12.30], [14, 17]]
 tuesday = [[9, 12.30], [14, 17]]
@@ -83,37 +87,56 @@ thursday = [[9, 12.30], [14, 17]]
 friday = [[9, 12.30], [14, 17]]
 
 [time_maps.weekend]
-saturday = [[9, 12.30], ]
-sunday = [[9, 12.30], ]
+saturday = [[9, 12.30]]
+sunday = [[9, 12.30]]
 
 [scheduler]
-days_ahead = 1000 # how far go with the schedule (lower values make the computation faster)
+days_ahead = 1000         # How far to go with the schedule (lower values = faster computation)
+weight_urgency = 1.0      # Default weight for urgency in scheduling (overridable via CLI)
+# if weight_urgency is set to 0, only due urgency is considered
+# by default, this factor is automatically reduced if some task cannot be scheduled in time,
+# leading to tasks with due dates being prioritized (see --no-auto-adjust-urgency)
 
 [calendars]
-# ical calendars can be used to block your time and make the scheduling more precise
+# iCal calendars can be used to block your time and make the scheduling more precise
 [calendars.1]
 url = "https://your/url/to/calendar.ics"
-expiration = 0.08 # in hours (0.08 hours =~ 5 minutes)
-timezone = "Europe/Rome" # if set, force timezone for this calendar; timezone values are TZ identifiers (https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+expiration = 0.08         # In hours (0.08 hours ≈ 5 minutes)
+timezone = "Europe/Rome"  # If set, force timezone for this calendar (see TZ database)
 
 [calendars.holidays]
 url = "https://www.officeholidays.com/ics-clean/italy/milan"
 event_all_day_is_blocking = true
-expiration = 720 # in hours (720 hours = 30 days)
+expiration = 720          # In hours (720 hours = 30 days)
 
 [report]
-additional_attributes = ["estimated", "due", "urgency"] # additional attributes to show in the report
-# when these words are matched in the task description, the corresponding emoji is used
-emoji_keywords = {"meet"=":busts_in_silhouette:", "review"=":mag_right:"}
-include_unplanned = true # include unplanned tasks in the report in an ad-hoc section
-additional_attributes_unplanned = ["due", "urgency"] # additional attributes to show in the report for unplanned tasks
+include_unplanned = true
+additional_attributes = ["estimated", "due", "urgency"]           # Extra attributes to show in the report
+additional_attributes_unplanned = ["due", "urgency"]               # Extra attributes for unplanned tasks
+emoji_keywords = {"meet"=":busts_in_silhouette:", "review"=":mag_right:"} # Map keywords to emoji
 ```
+
+### Configuration Options
+
+- **[scheduler]**
+  - `days_ahead`: How many days ahead to schedule tasks.
+  - `weight_urgency`: Default weight for urgency in scheduling (0.0 to 1.0). Can be overridden with `--urgency-weight`.
+- **[calendars]**
+  - `url`: iCal URL to block time.
+  - `expiration`: Cache expiration in hours.
+  - `timezone`: (Optional) Force a timezone for this calendar.
+  - `event_all_day_is_blocking`: (Optional, bool) Treat all-day events as blocking.
+- **[report]**
+  - `include_unplanned`: Show unplanned tasks in a separate section.
+  - `additional_attributes`: Extra columns to show in the report.
+  - `additional_attributes_unplanned`: Extra columns for unplanned tasks.
+  - `emoji_keywords`: Map keywords in task descriptions to emoji.
 
 ## Algorithm
 
 The algorithm simulates what happens if you work on a task for a certain time on a given day.
 
-For each day X starting from today, it sorts the tasks by decreasing urgency. 
+For each day X starting from today, it sorts the tasks by decreasing urgency.
 It start from the most urgent tasks that can be allocated on day X depending on the task's
 `time_map` and on your calendars. It allocates a few number of hours to the task,
 then recomputes the urgencies exactly as Taskwarrior would do
@@ -128,6 +151,10 @@ skip all the available slots until 12 pm.
 The maximum time that is allocated at each attempt is by default 2 hours
 (or less if the task is shorter), but you can change it by tuning the Taskwarrior UDA `min_block`.
 
+After the scheduling is done, if any task has a `completion_date` after its `due_date`, the
+`weight_urgency` factor is reduced by 0.1 and the scheduling is repeated, until all tasks
+are scheduled before their due dates or the `weight_urgency` factor reaches 0.
+
 ## Tips and Tricks
 
 - You can exclude a task from being scheduled by removing the `time_map` or `estimated` attributes.
@@ -136,7 +163,30 @@ The maximum time that is allocated at each attempt is by default 2 hours
 ## CLI Options
 
 ```
--v, --verbose: increase output verbosity
--i, --install: install taskcheck configuration
--r, --report: show tasks planned until a certain time
+-v, --verbose                Increase output verbosity
+-i, --install                Install taskcheck configuration
+-r, --report CONSTRAINT      Show tasks planned until a certain time (e.g. 'today', '1w', 'eow')
+-s, --schedule               Perform the scheduling algorithm and update tasks
+-f, --force-update           Force update of all iCal calendars, ignoring cache expiration
+    --taskrc PATH            Set custom TASKRC directory (and TASKDATA) for debugging or alternate environments
+    --urgency-weight FLOAT   Weight for urgency in scheduling (0.0 to 1.0), overrides config value. When 0, only due urgency is considered.
+    --dry-run                Perform scheduling without modifying the Taskwarrior database (useful for testing)
+    --no-auto-adjust-urgency Disable auto-adjustment of urgency weight (default: enabled)
 ```
+
+### Examples
+
+- `taskcheck --schedule`  
+  Run the scheduler and update your Taskwarrior tasks.
+- `taskcheck --schedule --dry-run`  
+  Preview the schedule without modifying your database.
+- `taskcheck --schedule --urgency-weight 0.5`  
+  Use a custom urgency weighting for this run.
+- `taskcheck --schedule --no-auto-adjust-urgency`  
+  Avoid the automatically reduction of urgency weight if tasks can't be scheduled before their due dates.
+- `taskcheck --report today`  
+  Show the schedule for today.
+- `taskcheck --report 1w`  
+  Show the schedule for the next week.
+- `taskcheck --force-update`  
+  Force refresh of all iCal calendars, ignoring cache.
