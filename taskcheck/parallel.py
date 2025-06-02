@@ -378,11 +378,12 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urge
             - info["due_urgency"]
             - info["age_urgency"]
         )
+        # Always add due_urgency, only weight estimated and age
         weighted_urgency = (
             base_urgency
             + info["estimated_urgency"] * weight_urgency
-            + info["due_urgency"] * (1.0 - weight_urgency)
             + info["age_urgency"] * weight_urgency
+            + info["due_urgency"] * weight_urgency
         )
         info["urgency"] = weighted_urgency
 
