@@ -40,12 +40,12 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "--urgency-weight",
     type=float,
-    help="weight for urgency in scheduling (0.0 to 1.0), overrides config value. Due date weight will be 1 - urgency_weight",
+    help="weight for urgency in scheduling (0.0 to 1.0), overrides config value. Not aaplie to due urgency, i.e. when 0, only due urgency is considered.",
 )
 arg_parser.add_argument(
     "--dry-run",
     action="store_true",
-    help="perform scheduling without modifying the Taskwarrior database, useful for testing"
+    help="perform scheduling without modifying the Taskwarrior database, useful for testing",
 )
 
 
@@ -58,7 +58,7 @@ def load_config():
 
 def main():
     args = arg_parser.parse_args()
-    
+
     # Load data and check tasks
     print_help = True
     result = None
@@ -70,7 +70,14 @@ def main():
 
     if args.schedule:
         config = load_config()
-        result = check_tasks_parallel(config, verbose=args.verbose, force_update=args.force_update, taskrc=args.taskrc, urgency_weight_override=args.urgency_weight, dry_run=args.dry_run)
+        result = check_tasks_parallel(
+            config,
+            verbose=args.verbose,
+            force_update=args.force_update,
+            taskrc=args.taskrc,
+            urgency_weight_override=args.urgency_weight,
+            dry_run=args.dry_run,
+        )
         print_help = False
 
     if args.report:
@@ -81,7 +88,14 @@ def main():
         if args.schedule and args.dry_run:
             # If we just did a dry-run schedule, use those results
             scheduling_results = result
-        generate_report(config, args.report, args.verbose, force_update=args.force_update, taskrc=args.taskrc, scheduling_results=scheduling_results)
+        generate_report(
+            config,
+            args.report,
+            args.verbose,
+            force_update=args.force_update,
+            taskrc=args.taskrc,
+            scheduling_results=scheduling_results,
+        )
         print_help = False
 
     if print_help:

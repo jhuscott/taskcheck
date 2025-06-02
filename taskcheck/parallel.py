@@ -374,19 +374,10 @@ def recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urge
         update_urgency(info, "age_urgency", urgency_age, urgency_coefficients, date)
 
         # Apply weights to create a combined score
-        base_urgency = (
-            info["urgency"]
-            - info["estimated_urgency"]
-            - info["due_urgency"]
-            - info["age_urgency"]
-        )
+        base_urgency = info["urgency"] - info["due_urgency"]
+        base_urgency *= weight_urgency
         # Always add due_urgency, only weight estimated and age
-        weighted_urgency = (
-            base_urgency
-            + info["estimated_urgency"] * weight_urgency
-            + info["age_urgency"] * weight_urgency
-            + info["due_urgency"] * weight_urgency
-        )
+        weighted_urgency = base_urgency + info["due_urgency"]
         info["urgency"] = weighted_urgency
 
         started_by_user = info["task"].get("start", "") != ""
