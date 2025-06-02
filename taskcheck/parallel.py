@@ -85,7 +85,12 @@ def get_urgency_coefficients(taskrc=None):
 
 
 def check_tasks_parallel(
-    config, verbose=False, force_update=False, taskrc=None, urgency_weight_override=None, dry_run=False
+    config,
+    verbose=False,
+    force_update=False,
+    taskrc=None,
+    urgency_weight_override=None,
+    dry_run=False,
 ):
     tasks = get_tasks(taskrc=taskrc)
     time_maps = config["time_maps"]
@@ -94,10 +99,8 @@ def check_tasks_parallel(
     # Handle weight configuration
     if urgency_weight_override is not None:
         weight_urgency = urgency_weight_override
-        weight_due_date = 1.0 - urgency_weight_override
     else:
         weight_urgency = config["scheduler"].get("weight_urgency", 1.0)
-        weight_due_date = config["scheduler"].get("weight_due_date", 0.0)
 
     calendars = get_calendars(config, verbose=verbose, force_update=force_update)
     urgency_coefficients = get_urgency_coefficients(taskrc=taskrc)
@@ -113,7 +116,6 @@ def check_tasks_parallel(
             urgency_coefficients,
             verbose,
             weight_urgency,
-            weight_due_date,
         )
 
     if dry_run:
@@ -123,16 +125,16 @@ def check_tasks_parallel(
             task = info["task"]
             if not info["scheduling"]:
                 continue
-            
+
             scheduled_dates = sorted(info["scheduling"].keys())
             start_date = scheduled_dates[0]
             end_date = scheduled_dates[-1]
-            
+
             scheduling_note = ""
             for date_str in scheduled_dates:
                 hours = info["scheduling"][date_str]
                 scheduling_note += f"{date_str} - {hours_to_pdth(hours)}\n"
-            
+
             task_result = {
                 "id": task["id"],
                 "uuid": task["uuid"],
@@ -143,21 +145,23 @@ def check_tasks_parallel(
                 "due": task.get("due", ""),
                 "scheduled": start_date,
                 "completion_date": end_date,
-                "scheduling": scheduling_note.strip()
+                "scheduling": scheduling_note.strip(),
             }
-            
+
             # Check if task will be completed on time
             due = task.get("due")
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
-            if due is not None and end_date_dt > datetime.strptime(due, "%Y%m%dT%H%M%SZ"):
+            if due is not None and end_date_dt > datetime.strptime(
+                due, "%Y%m%dT%H%M%SZ"
+            ):
                 task_result["warning"] = "Task may not be completed on time"
                 if verbose:
                     console.print(
                         f"[red]Warning: Task {task['id']} ('{task['description']}') is not going to be completed on time.[/red]"
                     )
-            
+
             scheduling_results.append(task_result)
-        
+
         return scheduling_results
     else:
         # Normal operation - update tasks in Taskwarrior
@@ -206,7 +210,6 @@ def allocate_time_for_day(
     urgency_coefficients,
     verbose,
     weight_urgency,
-    weight_due_date,
 ):
     date = datetime.today().date() + timedelta(days=day_offset)
     total_available_hours = compute_total_available_hours(task_info, day_offset)
@@ -219,9 +222,7 @@ def allocate_time_for_day(
     tasks_remaining = prepare_tasks_remaining(task_info, day_offset)
 
     while day_remaining_hours > 0 and tasks_remaining:
-        recompute_urgencies(
-            tasks_remaining, urgency_coefficients, date, weight_urgency, weight_due_date
-        )
+        recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urgency)
         sorted_task_ids = sorted(
             tasks_remaining.keys(),
             key=lambda x: tasks_remaining[x]["urgency"],
@@ -357,9 +358,7 @@ def update_urgency(info, urgency_key, urgency_compute_fn, urgency_coefficients, 
     info["urgency"] = info["urgency"] - old_urgency + urgency_value
 
 
-def recompute_urgencies(
-    tasks_remaining, urgency_coefficients, date, weight_urgency, weight_due_date
-):
+def recompute_urgencies(tasks_remaining, urgency_coefficients, date, weight_urgency):
     """Recompute urgency simulating that today is `date`"""
     # Recompute estimated urgencies as before
     for info in tasks_remaining.values():
@@ -382,7 +381,7 @@ def recompute_urgencies(
         weighted_urgency = (
             base_urgency
             + info["estimated_urgency"] * weight_urgency
-            + info["due_urgency"] * weight_due_date
+            + info["due_urgency"] * (1.0 - weight_urgency)
             + info["age_urgency"] * weight_urgency
         )
         info["urgency"] = weighted_urgency
