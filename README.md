@@ -1,19 +1,20 @@
-
-```
-                                                                                                         
-888888888888                    88          ,ad8888ba,   88                                   88         
-     88                         88         d8"'    `"8b  88                                   88         
-     88                         88        d8'            88                                   88         
-     88  ,adPPYYba,  ,adPPYba,  88   ,d8  88             88,dPPYba,    ,adPPYba,   ,adPPYba,  88   ,d8   
-     88  ""     `Y8  I8[    ""  88 ,a8"   88             88P'    "8a  a8P_____88  a8"     ""  88 ,a8"    
-     88  ,adPPPPP88   `"Y8ba,   8888[     Y8,            88       88  8PP"""""""  8b          8888[      
-     88  88,    ,88  aa    ]8I  88`"Yba,   Y8a.    .a8P  88       88  "8b,   ,aa  "8a,   ,aa  88`"Yba,   
-     88  `"8bbdP"Y8  `"YbbdP"'  88   `Y8a   `"Y8888Y"'   88       88   `"Ybbd8"'   `"Ybbd8"'  88   `Y8a  
-                                                                                                         
-
+<div align="center">
+  
+```                                                                                                                                                                  
+########    ###     ######  ##    ##  ######  ##     ## ########  ######  ##    ## 
+   ##      ## ##   ##    ## ##   ##  ##    ## ##     ## ##       ##    ## ##   ##  
+   ##     ##   ##  ##       ##  ##   ##       ##     ## ##       ##       ##  ##   
+   ##    ##     ##  ######  #####    ##       ######### ######   ##       #####    
+   ##    #########       ## ##  ##   ##       ##     ## ##       ##       ##  ##   
+   ##    ##     ## ##    ## ##   ##  ##    ## ##     ## ##       ##    ## ##   ##  
+   ##    ##     ##  ######  ##    ##  ######  ##     ## ########  ######  ##    ## 
 ```
 
 > _A non-AI automatic scheduler for taskwarrior (i.e. alternative to skedpal / timehero / flowsavvy / reclaim / trevor / motion)_
+
+  ![immagine](https://github.com/user-attachments/assets/27b83bb1-7a50-4923-a453-0a958fbe11ed)
+
+</div>
 
 This is a taskwarrior extension that automatically schedule your tasks based on your working hours,
 estimated time, and calendar events, finding an optimal time to work on each task and match all your
