@@ -1,6 +1,6 @@
 [project]
 name = "taskcheck"
-version = "1.0.0"
+version = "1.0.0-1"
 description = "Automatic scheduler for taskwarrior"
 readme = "README.md"
 requires-python = ">=3.11"
