@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 
 from datetime import datetime, timedelta
+from rich.console import Console
 from taskcheck.common import (
     AVOID_STATUS,
     console,
@@ -109,6 +110,8 @@ def check_tasks_parallel(
         tasks, time_maps, days_ahead, urgency_coefficients, calendars
     )
 
+    console = Console()
+
     for day_offset in range(days_ahead):
         allocate_time_for_day(
             task_info,
@@ -155,10 +158,9 @@ def check_tasks_parallel(
                 due, "%Y%m%dT%H%M%SZ"
             ):
                 task_result["warning"] = "Task may not be completed on time"
-                if verbose:
-                    console.print(
-                        f"[red]Warning: Task {task['id']} ('{task['description']}') is not going to be completed on time.[/red]"
-                    )
+                console.print(
+                    f"[red]Warning: Task {task['id']} ('{task['description']}') is not going to be completed on time.[/red]"
+                )
 
             scheduling_results.append(task_result)
 
