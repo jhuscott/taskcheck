@@ -16,7 +16,7 @@
 
 </div>
 
-This is a taskwarrior extension that automatically schedule your tasks based on your working hours,
+This is a taskwarrior extension that automatically schedules your tasks based on your working hours,
 estimated time, and calendar events, finding an optimal time to work on each task and match all your
 deadlines.
 
@@ -27,7 +27,7 @@ deadlines.
 - [x] **Parallel scheduling algorithm for multiple tasks, considering urgency and dependencies**
 - [x] Dry-run mode: preview scheduling without modifying your Taskwarrior database
 - [x] Custom urgency weighting for scheduling (via CLI or config)
-- [x] **Auto-fix scheduling to mach due dates**
+- [x] **Auto-fix scheduling to match due dates**
 - [x] Force update of iCal calendars, bypassing cache
 - [x] Simple, customizable reports for planned and unplanned tasks
 - [x] Emoji and attribute customization in reports
