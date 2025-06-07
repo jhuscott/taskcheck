@@ -49,7 +49,9 @@ arg_parser.add_argument(
 )
 arg_parser.add_argument(
     "--no-auto-adjust-urgency",
-    action="store_true",
+    dest="auto_adjust_urgency",    # Argument we want to manipulate
+    action="store_false",          # If the flag is passed, set value to False 
+    default=True,                  # If the flag is not passed, set value to True by default
     help="disable automatically reduction of urgency weight when tasks cannot be completed on time",
 )
 
