@@ -138,20 +138,22 @@ def check_tasks_parallel(
         tasks_overdue = []
         for info in task_info.values():
             task = info["task"]
-            if not info["scheduling"]:
-                continue
-
-            scheduled_dates = sorted(info["scheduling"].keys())
-            if not scheduled_dates:
-                continue
-            end_date = scheduled_dates[-1]
-
             due = task.get("due")
+
             if due is not None:
-                end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
                 due_dt = datetime.strptime(due, "%Y%m%dT%H%M%SZ")
-                if end_date_dt > due_dt:
+
+                # Case 1: Task has no scheduling at all and has remaining hours
+                if not info["scheduling"] and info["remaining_hours"] > 0:
                     tasks_overdue.append(task)
+                # Case 2: Task is scheduled but completion date is after due date
+                elif info["scheduling"]:
+                    scheduled_dates = sorted(info["scheduling"].keys())
+                    if scheduled_dates:
+                        end_date = scheduled_dates[-1]
+                        end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                        if end_date_dt > due_dt:
+                            tasks_overdue.append(task)
 
         # If no tasks are overdue or auto-adjust is disabled, break the loop
         if not tasks_overdue or not auto_adjust_urgency:
@@ -169,17 +171,17 @@ def check_tasks_parallel(
             break
 
     # After loop completes, check if we still have overdue tasks
-    if auto_adjust_urgency and (tasks_overdue and current_weight <= 0):
-        # Print final weight message
-        console.print(
-            f"[green]Final urgency weight: {max(current_weight, 0.0):.1f}[/green]"
-        )
-        # Always print the warning if we still have overdue tasks
-        console.print(
-            "[red]Warning: cannot find a solution even with urgency weight 0.0[/red]"
-        )
-
-    # Do not print the final urgency weight message again here, as it is already printed above if needed.
+    if auto_adjust_urgency and current_weight < initial_weight_urgency:
+        if tasks_overdue:
+            # We tried to adjust but still have overdue tasks
+            console.print(
+                "[red]Warning: cannot find a solution even with urgency weight 0.0[/red]"
+            )
+        else:
+            # We successfully resolved overdue tasks by adjusting weight
+            console.print(
+                f"[green]Final urgency weight: {max(current_weight, 0.0):.1f}[/green]"
+            )
 
     if dry_run:
         # Generate JSON output instead of updating tasks
