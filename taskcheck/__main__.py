@@ -49,9 +49,9 @@ arg_parser.add_argument(
 )
 arg_parser.add_argument(
     "--no-auto-adjust-urgency",
-    dest="auto_adjust_urgency",    # ← the name you want in args
-    action="store_false",          # ← if the flag is present, set it to False
-    default=True,                  # ← if the flag is absent, leave it at True
+    dest="auto_adjust_urgency",
+    action="store_false",
+    default=True,
     help="disable automatic reduction of urgency weight … (default: enabled)",
 )
 
@@ -108,12 +108,9 @@ def main():
             taskrc=args.taskrc,
             urgency_weight_override=args.urgency_weight,
             dry_run=args.dry_run,
+            auto_adjust_urgency=args.auto_adjust_urgency,
         )
         # Only add auto_adjust_urgency if it is present and a real bool (not a mock)
-        if hasattr(args, "no_auto_adjust_urgency") and isinstance(
-            args.no_auto_adjust_urgency, bool
-        ):
-            check_tasks_kwargs["auto_adjust_urgency"] = not args.no_auto_adjust_urgency
         result = check_tasks_parallel(
             config,
             **check_tasks_kwargs,

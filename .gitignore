@@ -10,3 +10,4 @@ wheels/
 .venv
 .aider*
 .coverage
+aider.session
