@@ -144,6 +144,7 @@ class TestMainFunction:
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 with patch.object(arg_parser, "print_help") as mock_help:
@@ -159,6 +160,7 @@ class TestMainFunction:
                 mock_args.install = True
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -189,6 +191,7 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
                 mock_args.dry_run = False
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -201,6 +204,7 @@ class TestMainFunction:
                     taskrc=test_taskrc,
                     urgency_weight_override=None,
                     dry_run=False,
+                    auto_adjust_urgency=True,
                 )
 
     @patch("taskcheck.__main__.load_config")
@@ -223,6 +227,7 @@ class TestMainFunction:
                 mock_args.force_update = True
                 mock_args.taskrc = test_taskrc
                 mock_args.dry_run = False
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -266,6 +271,7 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
                 mock_args.dry_run = False
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -309,6 +315,7 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
                 mock_args.dry_run = False
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -320,6 +327,7 @@ class TestMainFunction:
                     taskrc=test_taskrc,
                     urgency_weight_override=None,
                     dry_run=False,
+                    auto_adjust_urgency=True,
                 )
 
     @patch("taskcheck.__main__.load_config")
@@ -356,6 +364,7 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = 0.3
                 mock_args.dry_run = False
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -367,6 +376,7 @@ class TestMainFunction:
                     taskrc=test_taskrc,
                     urgency_weight_override=0.3,
                     dry_run=False,
+                    auto_adjust_urgency=True,
                 )
 
     @patch("taskcheck.__main__.load_config")
@@ -408,6 +418,7 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
                 mock_args.dry_run = True
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -420,6 +431,7 @@ class TestMainFunction:
             taskrc=test_taskrc,
             urgency_weight_override=None,
             dry_run=True,
+            auto_adjust_urgency=True,
         )
         mock_load_config.assert_called_once()
 
@@ -476,6 +488,7 @@ class TestMainFunction:
                 mock_args.taskrc = test_taskrc
                 mock_args.urgency_weight = None
                 mock_args.dry_run = True
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 main()
@@ -498,6 +511,7 @@ class TestMainFunction:
             taskrc=test_taskrc,
             urgency_weight_override=None,
             dry_run=True,
+            auto_adjust_urgency=True,
         )
 
     @patch("taskcheck.__main__.load_config")
@@ -511,6 +525,7 @@ class TestMainFunction:
                 mock_args.install = False
                 mock_args.schedule = True
                 mock_args.report = None
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 with pytest.raises(FileNotFoundError):
@@ -524,6 +539,7 @@ class TestMainFunction:
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 with patch.object(arg_parser, "print_help") as mock_help:
@@ -539,6 +555,7 @@ class TestMainFunction:
                 mock_args.install = True
                 mock_args.schedule = True
                 mock_args.report = None
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 with patch("taskcheck.__main__.load_config") as mock_load:
@@ -558,6 +575,7 @@ class TestImportErrorHandling:
                 mock_args.install = True
                 mock_args.schedule = False
                 mock_args.report = None
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 with patch(
@@ -575,6 +593,7 @@ class TestImportErrorHandling:
                 mock_args.install = False
                 mock_args.schedule = False
                 mock_args.report = "today"
+                mock_args.auto_adjust_urgency = True
                 mock_parse.return_value = mock_args
 
                 with patch("taskcheck.__main__.load_config", return_value={}):
