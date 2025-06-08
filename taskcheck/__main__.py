@@ -24,18 +24,18 @@ arg_parser.add_argument(
     "-s",
     "--schedule",
     action="store_true",
-    help="Perform the scheduling algorithm, giving a schedule and a scheduling UDA and alerting for not completable tasks",
+    help="Perform the scheduling algorithm, giving a schedule and a scheduling UDA and alerting for not completable tasks.",
 )
 arg_parser.add_argument(
     "-f",
     "--force-update",
     action="store_true",
-    help="Force update of all ical calendars by ignoring cache expiration",
+    help="Force update of all ical calendars by ignoring cache expiration.",
 )
 arg_parser.add_argument(
     "--taskrc",
     action="store",
-    help="Set custom TASKRC directory for debugging purposes",
+    help="Set custom TASKRC directory for debugging purposes.",
 )
 arg_parser.add_argument(
     "--urgency-weight",
@@ -45,14 +45,14 @@ arg_parser.add_argument(
 arg_parser.add_argument(
     "--dry-run",
     action="store_true",
-    help="Perform scheduling without modifying the Taskwarrior database, useful for testing",
+    help="Perform scheduling without modifying the Taskwarrior database, useful for testing.",
 )
 arg_parser.add_argument(
     "--no-auto-adjust-urgency",
     dest="auto_adjust_urgency",
     action="store_false",
     default=True,
-    help="Disable automatic reduction of urgency weight … (default: enabled)",
+    help="Disable automatic reduction of urgency weight when tasks cannot be completed on time. (Enabled by default, meaning automatic reduction will occur.)",
 )
 
 
