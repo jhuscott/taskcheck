@@ -176,15 +176,23 @@ are scheduled before their due dates or the `weight_urgency` factor reaches 0.
 ## CLI Options
 
 ```
--v, --verbose                Increase output verbosity
--i, --install                Install taskcheck configuration
--r, --report CONSTRAINT      Show tasks planned until a certain time (e.g. 'today', '1w', 'eow')
--s, --schedule               Perform the scheduling algorithm and update tasks
--f, --force-update           Force update of all iCal calendars, ignoring cache expiration
-    --taskrc PATH            Set custom TASKRC directory (and TASKDATA) for debugging or alternate environments
-    --urgency-weight FLOAT   Weight for urgency in scheduling (0.0 to 1.0), overrides config value. When 0, only due urgency is considered.
-    --dry-run                Perform scheduling without modifying the Taskwarrior database (useful for testing)
-    --no-auto-adjust-urgency Disable auto-adjustment of urgency weight (default: enabled)
+usage: __main__.py [-h] [-v] [-i] [-r REPORT] [-s] [-f] [--taskrc TASKRC] [--urgency-weight URGENCY_WEIGHT] [--dry-run] [--no-auto-adjust-urgency]
+
+options:
+  -h, --help            show this help message and exit
+  -v, --verbose         Increase output verbosity.
+  -i, --install         Install the UDAs, required settings, and default config file.
+  -r REPORT, --report REPORT
+                        Generate a report of the tasks based on the scheduling; can be any Taskwarrior datetime specification (e.g. today, tomorrow, eom, som, 1st, 2nd, etc.). It is considered as `by`, meaning that the report will be
+                        generated for all the days until the specified date and including it.
+  -s, --schedule        Perform the scheduling algorithm, giving a schedule and a scheduling UDA and alerting for not completable tasks
+  -f, --force-update    Force update of all ical calendars by ignoring cache expiration
+  --taskrc TASKRC       Set custom TASKRC directory for debugging purposes
+  --urgency-weight URGENCY_WEIGHT
+                        Weight for urgency in scheduling (0.0 to 1.0), overrides config value. When 1.0, the whole Taskwarrior urgency is used for scheduling. When 0.0, the Taskwarrior urgency is reduced to only due urgency.
+  --dry-run             Perform scheduling without modifying the Taskwarrior database, useful for testing
+  --no-auto-adjust-urgency
+                        Disable automatic reduction of urgency weight … (default: enabled)
 ```
 
 ### Examples

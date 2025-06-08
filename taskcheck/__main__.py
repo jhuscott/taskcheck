@@ -6,51 +6,53 @@ from taskcheck.common import config_dir
 
 arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument(
-    "-v", "--verbose", action="store_true", help="increase output verbosity."
+    "-v", "--verbose", action="store_true", help="Increase output verbosity."
 )
 arg_parser.add_argument(
     "-i",
     "--install",
     action="store_true",
-    help="install the UDAs, required settings, and default config file.",
+    help="Install the UDAs, required settings, and default config file.",
 )
 arg_parser.add_argument(
     "-r",
     "--report",
     action="store",
-    help="generate a report of the tasks based on the scheduling; can be any Taskwarrior datetime specification (e.g. today, tomorrow, eom, som, 1st, 2nd, etc.). It is considered as `by`, meaning that the report will be generated for all the days until the specified date and including it.",
+    help="Generate a report of the tasks based on the scheduling; can be any Taskwarrior datetime specification (e.g. today, tomorrow, eom, som, 1st, 2nd, etc.). It is considered as `by`, meaning that the report will be generated for all the days until the specified date and including it.",
 )
 arg_parser.add_argument(
     "-s",
     "--schedule",
     action="store_true",
-    help="perform the scheduling algorithm, giving a schedule and a scheduling UDA and alerting for not completable tasks",
+    help="Perform the scheduling algorithm, giving a schedule and a scheduling UDA and alerting for not completable tasks",
 )
 arg_parser.add_argument(
     "-f",
     "--force-update",
     action="store_true",
-    help="force update of all ical calendars by ignoring cache expiration",
+    help="Force update of all ical calendars by ignoring cache expiration",
 )
 arg_parser.add_argument(
     "--taskrc",
     action="store",
-    help="set custom TASKRC directory for debugging purposes",
+    help="Set custom TASKRC directory for debugging purposes",
 )
 arg_parser.add_argument(
     "--urgency-weight",
     type=float,
-    help="weight for urgency in scheduling (0.0 to 1.0), overrides config value. Not aaplie to due urgency, i.e. when 0, only due urgency is considered.",
+    help="Weight for urgency in scheduling (0.0 to 1.0), overrides config value. When 1.0, the whole Taskwarrior urgency is used for scheduling. When 0.0, the Taskwarrior urgency is reduced to only due urgency.",
 )
 arg_parser.add_argument(
     "--dry-run",
     action="store_true",
-    help="perform scheduling without modifying the Taskwarrior database, useful for testing",
+    help="Perform scheduling without modifying the Taskwarrior database, useful for testing",
 )
 arg_parser.add_argument(
     "--no-auto-adjust-urgency",
-    action="store_true",
-    help="disable automatically reduction of urgency weight when tasks cannot be completed on time",
+    dest="auto_adjust_urgency",
+    action="store_false",
+    default=True,
+    help="Disable automatic reduction of urgency weight … (default: enabled)",
 )
 
 
@@ -106,12 +108,9 @@ def main():
             taskrc=args.taskrc,
             urgency_weight_override=args.urgency_weight,
             dry_run=args.dry_run,
+            auto_adjust_urgency=args.auto_adjust_urgency,
         )
         # Only add auto_adjust_urgency if it is present and a real bool (not a mock)
-        if hasattr(args, "no_auto_adjust_urgency") and isinstance(
-            args.no_auto_adjust_urgency, bool
-        ):
-            check_tasks_kwargs["auto_adjust_urgency"] = not args.no_auto_adjust_urgency
         result = check_tasks_parallel(
             config,
             **check_tasks_kwargs,

@@ -17,7 +17,7 @@ VERBOSE=false
 COVERAGE=true
 HTML_REPORT=false
 SPECIFIC_TEST=""
-FAIL_FAST=false
+FAIL_FAST=true
 PARALLEL=false
 
 # Parse command line arguments

@@ -473,7 +473,8 @@ class TestAutoAdjustUrgency:
         from datetime import datetime, timedelta
 
         now = datetime.now()
-        future_date = now + timedelta(days=5)
+        future_date_near = now + timedelta(days=3)
+        future_date_far = now + timedelta(days=7)
 
         # Create tasks that will require at least one reduction in urgency weight
         overdue_tasks = [
@@ -481,24 +482,37 @@ class TestAutoAdjustUrgency:
                 "id": 1,
                 "uuid": "task-1",
                 "description": "Tight deadline",
-                "estimated": "P16H",  # 16 hours
+                "estimated": "P16H",  # 2 working days, due in 7 days
                 "time_map": "work",
                 "urgency": 20.0,
-                "due": future_date.strftime(
+                "due": future_date_far.strftime(
                     "%Y%m%dT%H%M%SZ"
-                ),  # Due in 5 days - tight deadline
+                ),  # Due in 7 days - tight deadline
                 "status": "pending",
                 "entry": now.strftime("%Y%m%dT%H%M%SZ"),  # Created today
-            }
+            },
+            {
+                "id": 2,
+                "uuid": "task-2",
+                "description": "Competing task",
+                "estimated": "P16H",  # 2 working days, due in 3 days
+                "time_map": "work",
+                "urgency": 15.0,
+                "due": future_date_near.strftime(
+                    "%Y%m%dT%H%M%SZ"
+                ),  # Same deadline to create conflict
+                "status": "pending",
+                "entry": now.strftime("%Y%m%dT%H%M%SZ"),  # Created today
+            },
         ]
 
         mock_tasks.return_value = overdue_tasks
         mock_coeffs.return_value = UrgencyCoefficients(
-            {"P16H": 10.0}, False, 4.0, 365, 12, 2
+            {"P16H": 10.0, "P8H": 8.0}, False, 4.0, 365, 12, 2
         )
         mock_calendars.return_value = []
-        # Mock limited available time that will cause scheduling conflicts
-        mock_long_range.return_value = ([2.0] * 7, 0.0)  # Only 2 hours per day
+        # Mock enough available time that the task CAN be completed with weight reduction
+        mock_long_range.return_value = ([4.0] * 7, 0.0)  # 28 total hours available
 
         with patch("taskcheck.parallel.console.print") as mock_console_print:
             check_tasks_parallel(
